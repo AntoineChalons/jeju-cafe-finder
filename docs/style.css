@@ -383,6 +383,7 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
   box-shadow: var(--shadow-lg);
 }
 .language-menu[hidden] { display: none; }
+.recommend-panel[hidden] { display: none; }
 .language-menu button {
   min-height: 44px;
   padding: 0.45rem 0.55rem;

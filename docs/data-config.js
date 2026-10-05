@@ -14,6 +14,9 @@ var CAFE_TIME_ZONE = "Asia/Seoul";
 // least one day of the week.
 var EARLY_OPENING = "08:00";
 
+// Show the "Recommended for you" panel. Set to true to enable it.
+var SHOW_RECOMMENDATIONS = false;
+
 // Enum filters. Blank values in the data mean "unknown" and never match a
 // selected option.
 var SIZES = ["tiny", "medium", "large"];

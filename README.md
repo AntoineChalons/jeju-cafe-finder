@@ -18,7 +18,7 @@ Users can:
 - Narrow by size (tiny ≤ 10 seats, medium 11–20, large > 20) and price range
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
-- See synchronized recommendations, map markers and table rows.
+- See synchronized map markers and table rows, with optional recommendations.
 - Select a cafe on the map to see whether it is open now, today's hours, and a
   `>` toggle for the full week.
 - See contact details in the map popup when available: Instagram, Facebook
@@ -34,6 +34,20 @@ Users can:
 The browser downloads a generated SQLite database and queries it with sql.js.
 The app is a static GitHub Pages site with no application server. Counts shown
 in the interface come from the loaded database.
+
+## Display configuration
+
+The "Recommended for you" panel is controlled by `SHOW_RECOMMENDATIONS` in
+`docs/data-config.js`:
+
+```js
+var SHOW_RECOMMENDATIONS = false;
+```
+
+It is hidden by default. Set this option to `true` to display the panel again.
+When disabled, the panel stays hidden during loading and its recommendation
+cards are not rendered. Filters, map markers and the comparison table continue
+to work normally.
 
 ## Opening hours
 
@@ -92,7 +106,7 @@ scripts are pinned to exact versions.
 docs/
 ├── app.js          # Filters, hours logic, recommendations, map, table, UI
 ├── bootstrap.js    # Loads the database before app.js starts
-├── data-config.js  # Areas, days, enums, criteria, early-opening threshold
+├── data-config.js  # Display options, areas, days, enums, criteria, early threshold
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
 ├── i18n.js         # UI translations (en, ko)
 ├── index.html      # Page markup and third-party scripts

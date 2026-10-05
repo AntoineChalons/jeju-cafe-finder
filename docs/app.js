@@ -1013,6 +1013,7 @@
   /* ---------------------------------------------------------
    * Recommendation engine
    * --------------------------------------------------------- */
+  var recommendPanel = document.getElementById("recommendPanel");
   var recommendCards = document.getElementById("recommendCards");
   var recommendSub = document.getElementById("recommendSub");
 
@@ -1023,6 +1024,12 @@
   }
 
   function renderRecommendations() {
+    recommendPanel.hidden = SHOW_RECOMMENDATIONS !== true;
+    if (recommendPanel.hidden) {
+      recommendCards.innerHTML = "";
+      return;
+    }
+
     var selectedKeys = selectedCriteriaKeys();
     var comparedKeys = selectedKeys.length ? selectedKeys : allCriteriaKeys();
 
