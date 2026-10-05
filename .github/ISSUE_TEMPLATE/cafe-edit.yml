@@ -1,0 +1,40 @@
+name: Suggest a cafe edit
+description: Report wrong hours, a closed cafe, a missing criterion, or suggest a new cafe.
+title: "[Cafe] "
+labels: ["data"]
+body:
+  - type: input
+    id: cafe
+    attributes:
+      label: Cafe
+      description: Name as shown in the app, or the Naver Map link for a new cafe.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What needs to change?
+      options:
+        - Opening hours
+        - Cafe has closed
+        - Criteria (work friendly, pets, ARC discount…)
+        - Size or price range
+        - Name, description or location
+        - Add a new cafe
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What is wrong and what it should be.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Where you saw it (Naver Place, Instagram post, your own visit and date…).
+    validations:
+      required: true
