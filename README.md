@@ -25,6 +25,9 @@ Users can:
   and KakaoTalk logos (a channel URL opens it; a plain Kakao ID is copied),
   plus a tap-to-call phone number and an email link.
 - Open each cafe in Naver Map.
+- Only cafes marked `publish=true` in the data appear. Drafts
+  (`publish=false`) are left out of the public database, and the app also
+  ignores any row with `publish = 0`.
 - Switch between English and Korean.
 - Use the responsive interface in light or dark mode.
 
@@ -139,7 +142,8 @@ Data changes belong in the private `jeju-cafe-data` repository, whose README
 documents every column.
 
 1. Edit `data/cafes.csv` for facts, coordinates, size, price, criteria, links
-   and English text.
+   and English text. Set `publish` (second column) to `true` to show a cafe,
+   or `false` to keep it as a hidden draft.
 2. Edit `data/hours.csv` for opening periods.
 3. Edit `data/translations.csv` for the Korean name, description and hours note.
 4. Run the local validation and tests.

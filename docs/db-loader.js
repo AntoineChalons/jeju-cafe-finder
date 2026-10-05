@@ -106,13 +106,17 @@
       var contactColumns = Object.keys(CONTACT_FIELDS).map(function (column) {
         return available[column] ? column : "NULL AS " + column;
       });
+      // Cafes with publish = 0 are drafts and are never shown. The public
+      // database already leaves them out; this also covers full local builds
+      // and databases from before the column existed.
+      var publishFilter = available.publish ? " WHERE publish = 1" : "";
       var cafes = rows(
         database,
         "SELECT id, name, name_kr, region, lat, lng, size, price, " +
           Object.keys(BOOLEAN_FIELDS).join(", ") +
           ", blurb, hours_note, hours_checked, naver_url, source_url, " +
           contactColumns.join(", ") +
-          " FROM cafes ORDER BY rowid"
+          " FROM cafes" + publishFilter + " ORDER BY rowid"
       ).map(toCafe);
 
       var byId = {};
@@ -133,6 +137,7 @@
       var translations = {};
       rows(database, "SELECT cafe_id, locale, name, blurb, hours_note FROM cafe_translations")
         .forEach(function (row) {
+          if (!byId[row.cafe_id]) return;
           if (!translations[row.cafe_id]) translations[row.cafe_id] = {};
           translations[row.cafe_id][row.locale] = {
             name: row.name,
