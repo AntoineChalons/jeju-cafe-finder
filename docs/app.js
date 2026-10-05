@@ -549,6 +549,85 @@
   var PIN_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 
+  var INSTAGRAM_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.1" fill="currentColor" stroke="none"/></svg>';
+  var FACEBOOK_SVG =
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.5V6.8c0-.8.5-1.3 1.4-1.3H17V2.2C16.6 2.1 15.4 2 14.1 2 11.3 2 9.6 3.7 9.6 6.6v1.9H6.8v3.6h2.8V22H14v-9.9h2.9l.5-3.6H14z"/></svg>';
+  var KAKAO_SVG =
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2c-5.4 0-9.8 3.4-9.8 7.7 0 2.7 1.8 5.1 4.5 6.5l-1 3.6c-.1.3.3.6.6.4l4.3-2.8c.5.1.9.1 1.4.1 5.4 0 9.8-3.4 9.8-7.8S17.4 3.2 12 3.2z"/></svg>';
+  var PHONE_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+  var MAIL_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>';
+  var COPY_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+  function isUrl(value) {
+    return /^https?:\/\//i.test(value || "");
+  }
+
+  // Social logos (Instagram, Facebook, Kakao) and phone/email lines, shown
+  // only for fields that are filled in.
+  function contactHtml(cafe) {
+    var socials = [];
+    if (isUrl(cafe.instagramUrl)) {
+      socials.push('<a class="social-btn social-instagram" href="' + safeUrl(cafe.instagramUrl) + '" target="_blank" rel="noopener" aria-label="' +
+        escapeHtml(message("contact.instagram")) + '" title="' + escapeHtml(message("contact.instagram")) + '" data-testid="link-instagram-' + escapeHtml(cafe.id) + '">' + INSTAGRAM_SVG + "</a>");
+    }
+    if (isUrl(cafe.facebookUrl)) {
+      socials.push('<a class="social-btn social-facebook" href="' + safeUrl(cafe.facebookUrl) + '" target="_blank" rel="noopener" aria-label="' +
+        escapeHtml(message("contact.facebook")) + '" title="' + escapeHtml(message("contact.facebook")) + '" data-testid="link-facebook-' + escapeHtml(cafe.id) + '">' + FACEBOOK_SVG + "</a>");
+    }
+    if (cafe.kakao) {
+      socials.push(isUrl(cafe.kakao)
+        ? '<a class="social-btn social-kakao" href="' + safeUrl(cafe.kakao) + '" target="_blank" rel="noopener" aria-label="' +
+          escapeHtml(message("contact.kakaoChannel")) + '" title="' + escapeHtml(message("contact.kakaoChannel")) + '" data-testid="link-kakao-' + escapeHtml(cafe.id) + '">' + KAKAO_SVG + "</a>"
+        : '<button type="button" class="social-btn social-kakao" data-copy="' + escapeHtml(cafe.kakao) + '" aria-label="' +
+          escapeHtml(message("contact.copyKakao", { id: cafe.kakao })) + '" title="' + escapeHtml(message("contact.copyKakao", { id: cafe.kakao })) + '" data-testid="button-kakao-' + escapeHtml(cafe.id) + '">' + KAKAO_SVG + "</button>");
+    }
+
+    var lines = [];
+    if (cafe.phone) {
+      lines.push('<a class="contact-line" href="tel:' + escapeHtml(cafe.phone.replace(/[^0-9+]/g, "")) + '" aria-label="' +
+        escapeHtml(message("contact.call", { phone: cafe.phone })) + '" data-testid="link-phone-' + escapeHtml(cafe.id) + '">' + PHONE_SVG + "<span>" + escapeHtml(cafe.phone) + "</span></a>");
+    }
+    if (cafe.email) {
+      lines.push('<a class="contact-line" href="mailto:' + escapeHtml(cafe.email) + '" aria-label="' +
+        escapeHtml(message("contact.email", { email: cafe.email })) + '" data-testid="link-email-' + escapeHtml(cafe.id) + '">' + MAIL_SVG + "<span>" + escapeHtml(cafe.email) + "</span></a>");
+    }
+    if (cafe.kakao && !isUrl(cafe.kakao)) {
+      lines.push('<button type="button" class="contact-line" data-copy="' + escapeHtml(cafe.kakao) + '" aria-label="' +
+        escapeHtml(message("contact.copyKakao", { id: cafe.kakao })) + '">' + KAKAO_SVG + "<span>" +
+        escapeHtml(message("contact.kakaoId")) + " <strong>" + escapeHtml(cafe.kakao) + "</strong></span>" +
+        '<span class="copy-icon">' + COPY_SVG + "</span></button>");
+    }
+
+    if (!socials.length && !lines.length) return "";
+    return '<div class="contact-block" aria-label="' + escapeHtml(message("contact.title")) + '">' +
+      (socials.length ? '<div class="social-row">' + socials.join("") + "</div>" : "") +
+      (lines.length ? '<div class="contact-lines">' + lines.join("") + "</div>" : "") +
+      "</div>";
+  }
+
+  // Copy a KakaoTalk ID to the clipboard and confirm briefly.
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-copy]");
+    if (!button) return;
+    var value = button.getAttribute("data-copy");
+    var done = function () {
+      document.querySelectorAll('[data-copy="' + CSS.escape(value) + '"]').forEach(function (element) {
+        element.classList.add("is-copied");
+        element.setAttribute("data-copied-label", message("contact.copied"));
+        window.setTimeout(function () { element.classList.remove("is-copied"); }, 1600);
+      });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(done, done);
+    } else {
+      done();
+    }
+  });
+
   function statusBadge(status) {
     var label = status.state === "open"
       ? message("hours.open")
@@ -673,6 +752,7 @@
       '<div class="popup-kr">' + (secondaryName(cafe) ? escapeHtml(secondaryName(cafe)) + " · " : "") + escapeHtml(regionName(cafe.region)) + "</div>" +
       (cafe.size || cafe.price ? '<div class="popup-meta">' + metaPills(cafe) + "</div>" : "") +
       hoursBlockHtml(cafe) +
+      contactHtml(cafe) +
       '<p class="popup-blurb">' + escapeHtml(display.blurb) + "</p>" +
       (tags ? '<div class="popup-tags">' + tags + "</div>" : "") +
       '<a class="popup-link" href="' + naver + '" target="_blank" rel="noopener">' +

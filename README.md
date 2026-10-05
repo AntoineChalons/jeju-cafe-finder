@@ -21,6 +21,9 @@ Users can:
 - See synchronized recommendations, map markers and table rows.
 - Select a cafe on the map to see whether it is open now, today's hours, and a
   `>` toggle for the full week.
+- See contact details in the map popup when available: Instagram, Facebook
+  and KakaoTalk logos (a channel URL opens it; a plain Kakao ID is copied),
+  plus a tap-to-call phone number and an email link.
 - Open each cafe in Naver Map.
 - Switch between English and Korean.
 - Use the responsive interface in light or dark mode.

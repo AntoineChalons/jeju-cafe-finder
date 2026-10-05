@@ -22,6 +22,16 @@
     kids: "kids",
   };
 
+  // Optional contact columns. Older databases may not have them yet, so they
+  // are selected as NULL when missing.
+  var CONTACT_FIELDS = {
+    instagram_url: "instagramUrl",
+    facebook_url: "facebookUrl",
+    kakao: "kakao",
+    phone: "phone",
+    email: "email",
+  };
+
   function databaseUrl() {
     var override = new URLSearchParams(window.location.search).get("database");
     return override || window.JEJU_CAFE_DATABASE_URL || DEFAULT_DATABASE_URL;
@@ -67,6 +77,9 @@
     Object.keys(BOOLEAN_FIELDS).forEach(function (column) {
       cafe[BOOLEAN_FIELDS[column]] = row[column] === 1;
     });
+    Object.keys(CONTACT_FIELDS).forEach(function (column) {
+      cafe[CONTACT_FIELDS[column]] = row[column] ? String(row[column]).trim() : "";
+    });
     return cafe;
   }
 
@@ -86,12 +99,20 @@
     var bytes = new Uint8Array(await response.arrayBuffer());
     var database = new SQL.Database(bytes);
     try {
+      var available = {};
+      rows(database, "PRAGMA table_info(cafes)").forEach(function (column) {
+        available[column.name] = true;
+      });
+      var contactColumns = Object.keys(CONTACT_FIELDS).map(function (column) {
+        return available[column] ? column : "NULL AS " + column;
+      });
       var cafes = rows(
         database,
         "SELECT id, name, name_kr, region, lat, lng, size, price, " +
           Object.keys(BOOLEAN_FIELDS).join(", ") +
-          ", blurb, hours_note, hours_checked, naver_url, source_url " +
-          "FROM cafes ORDER BY rowid"
+          ", blurb, hours_note, hours_checked, naver_url, source_url, " +
+          contactColumns.join(", ") +
+          " FROM cafes ORDER BY rowid"
       ).map(toCafe);
 
       var byId = {};

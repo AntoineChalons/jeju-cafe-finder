@@ -840,3 +840,51 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 .hours-today-text.periods { justify-content: flex-start; }
 .period { white-space: nowrap; }
 .rec-hours-text, .cell-today small { white-space: nowrap; }
+
+/* ===== Contact links ===== */
+.contact-block { margin-top: 0.6rem; display: grid; gap: 0.45rem; }
+.social-row { display: flex; gap: 0.4rem; }
+.social-btn {
+  position: relative;
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+}
+.social-btn svg { width: 17px; height: 17px; }
+.social-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.social-instagram { background: radial-gradient(circle at 30% 107%, #FDF497 0%, #FD5949 45%, #D6249F 60%, #285AEB 90%); }
+.social-facebook { background: #1877F2; }
+.social-kakao { background: #FEE500; color: #191919; }
+.social-kakao svg { width: 18px; height: 18px; }
+.contact-lines { display: grid; gap: 0.15rem; }
+.contact-line {
+  position: relative;
+  display: flex; align-items: center; gap: 0.45rem;
+  width: 100%;
+  padding: 0.25rem 0.35rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  text-decoration: none;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.contact-line:hover { background: var(--color-surface-2); color: var(--color-primary); }
+.contact-line > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-muted); }
+.contact-line:hover > svg { color: var(--color-primary); }
+.contact-line span:first-of-type { flex: 1; }
+.contact-line strong { font-weight: 600; }
+.copy-icon { display: inline-flex; color: var(--color-text-faint); }
+.copy-icon svg { width: 13px; height: 13px; }
+[data-copy].is-copied::after {
+  content: attr(data-copied-label);
+  position: absolute; right: 0; top: -1.6rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--color-text); color: var(--color-bg);
+  font-size: 10.5px; font-weight: 600; white-space: nowrap;
+  pointer-events: none;
+}
+.social-btn[data-copy].is-copied::after { right: auto; left: 50%; transform: translateX(-50%); }
