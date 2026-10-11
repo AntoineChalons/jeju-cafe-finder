@@ -49,7 +49,6 @@ var APP_TRANSLATIONS = {
       viewNaver: "View on Naver Map",
       source: "Source:",
       reference: "reference",
-      closedLegend: "Closed now",
       showOnMap: "Show on map",
     },
     hours: {
@@ -90,7 +89,6 @@ var APP_TRANSLATIONS = {
       call: "Call {phone}",
       email: "Email {email}",
     },
-    links: { suggestEdit: "Suggest an edit" },
     footnote: "Cafe names open Naver Map in a new tab. Hours use Korea time and can change — check before you go.",
     summary: {
       all: "{count} of {total} cafes match your filters",
@@ -158,7 +156,6 @@ var APP_TRANSLATIONS = {
       viewNaver: "네이버 지도에서 보기",
       source: "출처:",
       reference: "참고",
-      closedLegend: "지금 영업 종료",
       showOnMap: "지도에서 보기",
     },
     hours: {
@@ -199,7 +196,6 @@ var APP_TRANSLATIONS = {
       call: "{phone}로 전화",
       email: "{email}로 이메일 보내기",
     },
-    links: { suggestEdit: "수정 제안" },
     footnote: "카페 이름을 누르면 새 탭에서 네이버 지도가 열립니다. 영업시간은 한국 시간 기준이며 바뀔 수 있으니 방문 전에 확인하세요.",
     summary: {
       all: "총 {total}곳 중 {count}곳이 필터와 일치합니다",

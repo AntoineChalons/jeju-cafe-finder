@@ -190,7 +190,10 @@ case in `computedValue()` in `docs/app.js`, and labels.
 
 - Warm palette inspired by [Cafe Cartographer](https://cafecartographer.com/):
   cream paper, espresso ink, coral, sage and golden-hour accents.
-- Theme follows the system preference and is not stored.
+- Theme defaults to light mode regardless of system preference. The manual
+  toggle still supports dark mode, and the choice is not stored.
+- Map pins use one theme-aware accent colour for every area. Closed cafes
+  remain faded, as explained in the map subtitle; there is no colour legend.
 - Language follows browser preferences, with `?lang=en` or `?lang=ko` as a
   shareable override. No IP-based detection.
 - MapLibre and OpenFreeMap provide the map without an API key; cafe names link

@@ -269,32 +269,6 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 }
 .results-summary strong { color: var(--color-text); font-family: var(--font-display); }
 
-.suggest-edit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0.5rem 1.1rem 0;
-  padding: 0.5rem 0.9rem;
-  flex-shrink: 0;
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-2);
-  color: var(--color-text-muted);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: var(--text-sm);
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.suggest-edit-btn:hover,
-.suggest-edit-btn:focus-visible {
-  background: var(--color-primary-highlight);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-.suggest-edit-btn i { width: 15px; height: 15px; }
-
 .sidebar-footnote {
   padding: 0.65rem 1.1rem;
   border-top: 1px solid var(--color-divider);
@@ -504,9 +478,6 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 .rec-empty { color: var(--color-text-muted); font-size: var(--text-sm); padding: 1rem 0; }
 
 /* ===== Map ===== */
-.legend { display: flex; gap: 0.7rem; flex-wrap: wrap; }
-.legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: var(--text-xs); color: var(--color-text-muted); }
-.legend-dot { width: 9px; height: 9px; border-radius: var(--radius-full); flex-shrink: 0; }
 
 
 .map-wrap { position: relative; }
@@ -802,12 +773,12 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 
 .cafe-marker {
   width: 18px; height: 18px;
+  background: var(--color-primary);
   border: 2.5px solid #FFF8F0;
   box-shadow: 0 1px 4px rgba(45, 27, 22, 0.35);
   transition: opacity var(--transition-interactive);
 }
 .cafe-marker.is-closed { opacity: 0.45; }
-.legend-closed { background: var(--color-text-faint); opacity: 0.6; }
 
 .rec-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; }
 .rec-meta .rec-region { margin-right: 0.15rem; }

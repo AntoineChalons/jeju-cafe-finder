@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -67,11 +67,6 @@
       <section class="filter-group results-summary" id="resultsSummary" data-testid="text-results-summary" aria-live="polite"></section>
     </div>
 
-    <a class="suggest-edit-btn" id="suggestEditBtn" href="https://github.com/AntoineChalons/jeju-cafe-finder/issues/new/choose" target="_blank" rel="noopener" data-testid="link-suggest-edit">
-      <i data-lucide="pencil-line"></i>
-      <span data-i18n="links.suggestEdit">Suggest an edit</span>
-    </a>
-
     <div class="sidebar-footnote" data-i18n="footnote">Cafe names open Naver Map in a new tab. Hours use Korea time and can change — check before you go.</div>
   </aside>
 
@@ -114,7 +109,6 @@
           <h2 id="mapHeading" class="panel-title"><i data-lucide="map"></i><span data-i18n="map.title">Map</span></h2>
           <p class="panel-sub" data-i18n="map.subtitle">Markers show only cafes matching your filters. Faded markers are closed right now.</p>
         </div>
-        <div class="legend" id="mapLegend"></div>
       </div>
       <div class="map-wrap">
         <div id="map" data-testid="map-cafes"></div>
