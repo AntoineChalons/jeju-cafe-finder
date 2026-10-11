@@ -259,13 +259,7 @@
   var themeToggleBtn = document.querySelector("[data-theme-toggle]");
   var themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
-  function getInitialTheme() {
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-
-  var currentTheme = getInitialTheme();
+  var currentTheme = "light";
 
   function renderThemeToggle() {
     themeToggleBtn.innerHTML =
@@ -334,7 +328,6 @@
       renderThemeToggle();
       renderLanguagePicker();
       renderControls();
-      renderLegend();
       renderTableHeader();
       update({ fit: false });
       setLanguageMenu(false);
@@ -647,32 +640,8 @@
   }
 
   /* ---------------------------------------------------------
-   * Map legend and map
+   * Map
    * --------------------------------------------------------- */
-  var REGION_COLORS = {
-    North: "#5C7A42",
-    East: "#C08A12",
-    South: "#C13E22",
-    West: "#8A6842",
-  };
-  var legendEl = document.getElementById("mapLegend");
-
-  function renderLegend() {
-    legendEl.innerHTML = "";
-    REGIONS.forEach(function (region) {
-      var item = document.createElement("span");
-      item.className = "legend-item";
-      item.innerHTML =
-        '<span class="legend-dot" style="background:' + REGION_COLORS[region] + '"></span>' +
-        escapeHtml(regionLabel(region));
-      legendEl.appendChild(item);
-    });
-    var closed = document.createElement("span");
-    closed.className = "legend-item";
-    closed.innerHTML = '<span class="legend-dot legend-closed"></span>' + escapeHtml(message("map.closedLegend"));
-    legendEl.appendChild(closed);
-  }
-
   var map = new maplibregl.Map({
     container: "map",
     style: "https://tiles.openfreemap.org/styles/positron",
@@ -783,7 +752,6 @@
     CAFES.forEach(function (cafe) {
       var element = document.createElement("div");
       element.className = "cafe-marker";
-      element.style.background = REGION_COLORS[cafe.region] || "#C13E22";
       element.setAttribute("data-testid", "marker-" + cafe.id);
 
       var popup = new maplibregl.Popup({ offset: 14, maxWidth: "290px", focusAfterOpen: false })
@@ -1125,7 +1093,6 @@
   }, 30000);
 
   renderControls();
-  renderLegend();
   renderTableHeader();
   update();
 })();
