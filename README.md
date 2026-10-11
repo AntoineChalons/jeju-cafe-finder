@@ -19,7 +19,10 @@ Users can:
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
 - See synchronized map markers and table rows, with optional recommendations.
-- See cafe names above map pins when the viewport is wider than it is tall.
+- See transparent cafe names above map pins on non-phone landscape screens
+  at least 768px wide. Overlapping names are hidden until there is room, for
+  example after zooming in; all cafe pins remain visible. Smartphones never
+  show map labels, including in landscape mode.
 - Select a cafe on the map to see whether it is open now, today's hours,
   tomorrow's first opening time (or closed/unknown), and a `>` toggle for the
   full week.

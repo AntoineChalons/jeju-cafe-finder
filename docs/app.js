@@ -655,6 +655,80 @@
   var cafesById = {};
   CAFES.forEach(function (cafe) { cafesById[cafe.id] = cafe; });
 
+  var labelLayoutFrame = null;
+
+  function canShowMapLabels() {
+    var tablet = /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var mobile = !tablet && ((navigator.userAgentData && navigator.userAgentData.mobile) ||
+      /iPhone|iPod|Android.*Mobile|Windows Phone/i.test(navigator.userAgent));
+    // Also cover phones requesting a desktop user agent.
+    var smallTouchScreen = window.matchMedia("(pointer: coarse)").matches &&
+      Math.min(window.screen.width, window.screen.height) < 600;
+    return !mobile && !smallTouchScreen &&
+      window.innerWidth >= 768 && window.innerWidth > window.innerHeight;
+  }
+
+  function labelRectsOverlap(a, b, gap) {
+    return a.left < b.right + gap && a.right + gap > b.left &&
+      a.top < b.bottom + gap && a.bottom + gap > b.top;
+  }
+
+  function layoutMapLabels() {
+    labelLayoutFrame = null;
+    var container = map.getContainer();
+    var enabled = canShowMapLabels();
+    container.classList.toggle("map-labels-enabled", enabled);
+    var candidates = [];
+    var obstacles = [];
+    var bounds = container.getBoundingClientRect();
+
+    Object.keys(markers).forEach(function (id) {
+      var marker = markers[id];
+      var element = marker.getElement();
+      var label = element.querySelector(".cafe-marker-label");
+      label.style.visibility = "hidden";
+      if (!enabled || element.style.display === "none") return;
+      var pinRect = element.getBoundingClientRect();
+      if (pinRect.right < bounds.left || pinRect.left > bounds.right ||
+          pinRect.bottom < bounds.top || pinRect.top > bounds.bottom) return;
+      obstacles.push(pinRect);
+      var rect = label.getBoundingClientRect();
+      // Do not show names that would be cut off at the map's edge.
+      if (rect.left < bounds.left + 4 || rect.right > bounds.right - 4 ||
+          rect.top < bounds.top + 4 || rect.bottom > bounds.bottom - 4) return;
+      candidates.push({ id: id, label: label, rect: rect });
+    });
+
+    if (!enabled) return;
+    container.querySelectorAll(".maplibregl-popup, .maplibregl-ctrl").forEach(function (element) {
+      obstacles.push(element.getBoundingClientRect());
+    });
+    // Prefer compact names, using the ID as a stable tie-breaker so labels
+    // do not flicker or change priority while panning.
+    candidates.sort(function (a, b) {
+      return a.rect.width - b.rect.width || a.id.localeCompare(b.id);
+    });
+    candidates.forEach(function (candidate) {
+      if (obstacles.some(function (rect) {
+        return labelRectsOverlap(candidate.rect, rect, 5);
+      })) return;
+      candidate.label.style.visibility = "visible";
+      obstacles.push(candidate.rect);
+    });
+  }
+
+  function scheduleMapLabels() {
+    if (labelLayoutFrame === null) {
+      labelLayoutFrame = window.requestAnimationFrame(layoutMapLabels);
+    }
+  }
+
+  map.on("render", scheduleMapLabels);
+  map.on("resize", scheduleMapLabels);
+  window.addEventListener("resize", scheduleMapLabels);
+  if (document.fonts) document.fonts.ready.then(scheduleMapLabels);
+
   function weekHoursHtml(cafe) {
     return DAYS.map(function (day, index) {
       var periods = cafe.hours[day] || [];
@@ -745,6 +819,7 @@
     // Re-run popup placement now that its height changed.
     var marker = markers[id];
     if (marker && marker.getPopup().isOpen()) marker.getPopup().setLngLat(marker.getLngLat());
+    scheduleMapLabels();
   });
 
   function createMarkers() {
@@ -755,8 +830,10 @@
       var label = document.createElement("span");
       label.className = "cafe-marker-label";
       label.textContent = cafeText(cafe).name;
+      label.setAttribute("aria-hidden", "true");
       element.appendChild(label);
       element.setAttribute("aria-label", cafeText(cafe).name);
+      element.title = cafeText(cafe).name;
 
       var popup = new maplibregl.Popup({ offset: 14, maxWidth: "290px", focusAfterOpen: false })
         .setHTML(buildPopupHtml(cafe));
@@ -775,7 +852,9 @@
         map.once("moveend", function () {
           if (popup.isOpen()) popup.setLngLat([cafe.lng, cafe.lat]);
         });
+        scheduleMapLabels();
       });
+      popup.on("close", scheduleMapLabels);
       markers[cafe.id] = new maplibregl.Marker({ element: element })
         .setLngLat([cafe.lng, cafe.lat])
         .setPopup(popup)
@@ -798,10 +877,12 @@
         var cafe = cafesById[id];
         element.querySelector(".cafe-marker-label").textContent = cafeText(cafe).name;
         element.setAttribute("aria-label", cafeText(cafe).name);
+        element.title = cafeText(cafe).name;
         element.classList.toggle("is-closed", hoursStatus(cafe).state === "closed");
         marker.getPopup().setHTML(buildPopupHtml(cafe));
       }
     });
+    scheduleMapLabels();
 
     var mapEmpty = document.getElementById("mapEmpty");
     if (filtered.length === 0) {
