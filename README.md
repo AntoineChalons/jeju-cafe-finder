@@ -19,8 +19,10 @@ Users can:
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
 - See synchronized map markers and table rows, with optional recommendations.
-- Select a cafe on the map to see whether it is open now, today's hours, and a
-  `>` toggle for the full week.
+- See cafe names above map pins when the viewport is wider than it is tall.
+- Select a cafe on the map to see whether it is open now, today's hours,
+  tomorrow's first opening time (or closed/unknown), and a `>` toggle for the
+  full week.
 - See contact details in the map popup when available: Instagram, Facebook
   and KakaoTalk logos (a channel URL opens it; a plain Kakao ID is copied),
   plus a tap-to-call phone number and an email link.

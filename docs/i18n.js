@@ -29,7 +29,6 @@ var APP_TRANSLATIONS = {
     prices: { 1: "Budget", 2: "Mid-range", 3: "Premium" },
     page: {
       title: "Compare, map and choose your Jeju cafe",
-      subtitle: "Pick an area and what matters to you — the map, recommendations and table update together.",
     },
     recommendations: {
       title: "Recommended for you",
@@ -43,7 +42,6 @@ var APP_TRANSLATIONS = {
     },
     map: {
       title: "Map",
-      subtitle: "Markers show only cafes matching your filters. Faded markers are closed right now.",
       empty: "No cafe matches every filter you've selected.",
       noData: "No cafes have been added yet.",
       viewNaver: "View on Naver Map",
@@ -56,6 +54,7 @@ var APP_TRANSLATIONS = {
       closed: "Closed",
       unknown: "Hours unknown",
       today: "Today",
+      tomorrow: "Tomorrow",
       closedToday: "Closed today",
       closesAt: "closes {time}",
       opensAt: "opens {time}",
@@ -89,7 +88,6 @@ var APP_TRANSLATIONS = {
       call: "Call {phone}",
       email: "Email {email}",
     },
-    footnote: "Cafe names open Naver Map in a new tab. Hours use Korea time and can change — check before you go.",
     summary: {
       all: "{count} of {total} cafes match your filters",
       region: "{count} of {total} cafes match your filters in {region}",
@@ -136,7 +134,6 @@ var APP_TRANSLATIONS = {
     prices: { 1: "저렴", 2: "보통", 3: "고급" },
     page: {
       title: "제주 카페를 비교하고 지도에서 골라 보세요",
-      subtitle: "지역과 원하는 조건을 고르면 지도, 추천, 표가 함께 업데이트됩니다.",
     },
     recommendations: {
       title: "추천 카페",
@@ -150,7 +147,6 @@ var APP_TRANSLATIONS = {
     },
     map: {
       title: "지도",
-      subtitle: "마커는 필터에 맞는 카페만 표시합니다. 흐린 마커는 지금 영업하지 않는 카페입니다.",
       empty: "선택한 모든 필터에 맞는 카페가 없습니다.",
       noData: "아직 등록된 카페가 없습니다.",
       viewNaver: "네이버 지도에서 보기",
@@ -163,6 +159,7 @@ var APP_TRANSLATIONS = {
       closed: "영업 종료",
       unknown: "영업시간 미확인",
       today: "오늘",
+      tomorrow: "내일",
       closedToday: "오늘 휴무",
       closesAt: "{time}에 마감",
       opensAt: "{time}에 오픈",
@@ -196,7 +193,6 @@ var APP_TRANSLATIONS = {
       call: "{phone}로 전화",
       email: "{email}로 이메일 보내기",
     },
-    footnote: "카페 이름을 누르면 새 탭에서 네이버 지도가 열립니다. 영업시간은 한국 시간 기준이며 바뀔 수 있으니 방문 전에 확인하세요.",
     summary: {
       all: "총 {total}곳 중 {count}곳이 필터와 일치합니다",
       region: "{region}의 총 {total}곳 중 {count}곳이 필터와 일치합니다",

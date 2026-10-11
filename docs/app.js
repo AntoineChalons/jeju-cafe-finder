@@ -667,33 +667,32 @@
 
   function hoursBlockHtml(cafe) {
     var status = hoursStatus(cafe);
-    var display = cafeText(cafe);
     var expanded = !!expandedHours[cafe.id];
     var weekId = "hours-week-" + cafe.id;
-    var footer = [];
-    if (display.hoursNote) footer.push('<p class="hours-note">' + escapeHtml(display.hoursNote) + "</p>");
-    footer.push(
-      '<p class="hours-checked">' +
-        escapeHtml(message("hours.timeZone")) +
-        (cafe.hoursChecked ? " · " + escapeHtml(message("hours.checked", { date: cafe.hoursChecked })) : "") +
-      "</p>"
-    );
+    var today = periodsOn(cafe, now.day);
+    var tomorrow = periodsOn(cafe, now.day + 1);
 
     return (
       '<div class="hours-block">' +
         '<div class="hours-status">' + statusBadge(status) +
-          (status.detail ? '<span class="hours-detail">' + escapeHtml(status.detail) + "</span>" : "") +
+          (cafe.hasHours
+            ? '<button type="button" class="hours-toggle" data-cafe-id="' + escapeHtml(cafe.id) + '" aria-expanded="' + expanded + '" aria-controls="' + weekId + '" aria-label="' +
+                escapeHtml(message(expanded ? "hours.hideWeek" : "hours.showWeek")) + '" data-testid="button-hours-' + escapeHtml(cafe.id) + '">' + CHEVRON_SVG + "</button>"
+            : "") +
+        "</div>" +
+        '<div class="hours-summary">' +
+          '<span class="hours-day-label">' + escapeHtml(message("hours.today")) + "</span>" +
+          '<span class="hours-day-text periods">' + (cafe.hasHours
+            ? (today.length ? periodsHtml(today) : escapeHtml(message("hours.closedToday")))
+            : escapeHtml(message("hours.unknown"))) + "</span>" +
+          '<span class="hours-day-label">' + escapeHtml(message("hours.tomorrow")) + "</span>" +
+          '<span class="hours-day-text">' + escapeHtml(cafe.hasHours
+            ? (tomorrow.length ? formatTime(tomorrow[0].open) : message("hours.closed"))
+            : message("hours.unknown")) + "</span>" +
         "</div>" +
         (cafe.hasHours
-          ? '<div class="hours-today">' +
-              '<span class="hours-today-label">' + escapeHtml(message("hours.today")) + "</span>" +
-              '<span class="hours-today-text periods">' + (periodsOn(cafe, now.day).length ? periodsHtml(periodsOn(cafe, now.day)) : escapeHtml(message("hours.closedToday"))) + "</span>" +
-              '<button type="button" class="hours-toggle" data-cafe-id="' + escapeHtml(cafe.id) + '" aria-expanded="' + expanded + '" aria-controls="' + weekId + '" aria-label="' +
-                escapeHtml(message(expanded ? "hours.hideWeek" : "hours.showWeek")) + '" data-testid="button-hours-' + escapeHtml(cafe.id) + '">' + CHEVRON_SVG + "</button>" +
-            "</div>" +
-            '<ul class="hours-week" id="' + weekId + '"' + (expanded ? "" : " hidden") + ">" + weekHoursHtml(cafe) + "</ul>"
+          ? '<ul class="hours-week" id="' + weekId + '"' + (expanded ? "" : " hidden") + ">" + weekHoursHtml(cafe) + "</ul>"
           : "") +
-        footer.join("") +
       "</div>"
     );
   }
@@ -753,6 +752,11 @@
       var element = document.createElement("div");
       element.className = "cafe-marker";
       element.setAttribute("data-testid", "marker-" + cafe.id);
+      var label = document.createElement("span");
+      label.className = "cafe-marker-label";
+      label.textContent = cafeText(cafe).name;
+      element.appendChild(label);
+      element.setAttribute("aria-label", cafeText(cafe).name);
 
       var popup = new maplibregl.Popup({ offset: 14, maxWidth: "290px", focusAfterOpen: false })
         .setHTML(buildPopupHtml(cafe));
@@ -792,6 +796,8 @@
       if (!visibleIds[id] && marker.getPopup().isOpen()) marker.togglePopup();
       if (visibleIds[id]) {
         var cafe = cafesById[id];
+        element.querySelector(".cafe-marker-label").textContent = cafeText(cafe).name;
+        element.setAttribute("aria-label", cafeText(cafe).name);
         element.classList.toggle("is-closed", hoursStatus(cafe).state === "closed");
         marker.getPopup().setHTML(buildPopupHtml(cafe));
       }
