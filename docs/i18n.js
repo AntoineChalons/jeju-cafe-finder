@@ -43,6 +43,8 @@ var APP_TRANSLATIONS = {
     },
     map: {
       title: "Map",
+      legend: "Map key",
+      pinTypes: { bakery: "Bakery", roastery: "Roastery", cafe: "Cafe", pub: "Pub" },
       empty: "No cafe matches every filter you've selected.",
       noData: "No cafes have been added yet.",
       viewNaver: "View on Naver Map",
@@ -149,6 +151,8 @@ var APP_TRANSLATIONS = {
     },
     map: {
       title: "지도",
+      legend: "지도 범례",
+      pinTypes: { bakery: "베이커리", roastery: "로스터리", cafe: "카페", pub: "펍" },
       empty: "선택한 모든 필터에 맞는 카페가 없습니다.",
       noData: "아직 등록된 카페가 없습니다.",
       viewNaver: "네이버 지도에서 보기",

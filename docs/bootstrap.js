@@ -14,8 +14,8 @@
     alert.setAttribute("role", "alert");
     var korean = /^ko\b/i.test(new URLSearchParams(window.location.search).get("lang") || navigator.language || "");
     alert.textContent = korean
-      ? "카페 데이터 또는 필터 설정을 불러올 수 없습니다. 새로고침하거나 잠시 후 다시 시도해 주세요."
-      : "Cafe data or filter configuration is not available. Refresh the page or try again later.";
+      ? "카페 데이터 또는 화면 설정을 불러올 수 없습니다. 새로고침하거나 잠시 후 다시 시도해 주세요."
+      : "Cafe data or display configuration is not available. Refresh the page or try again later.";
     document.body.prepend(alert);
     console.error(error);
   }
@@ -32,7 +32,7 @@
     });
   }
 
-  Promise.all([window.loadCafeDatabase(), window.loadCafeFilters()])
+  Promise.all([window.loadCafeDatabase(), window.loadCafeFilters(), window.loadMapPins()])
     .then(function (results) {
       var data = results[0];
       window.CAFES = data.cafes;

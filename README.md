@@ -19,6 +19,9 @@ Users can:
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
 - See synchronized map markers and table rows, with optional recommendations.
+- Identify venue types by both pin shape and colour, with a legend banner above
+  the map: croissant for bakery, coffee bean for roastery, cup for cafe and
+  beer mug for pub.
 - See transparent cafe names above map pins on non-phone landscape screens
   at least 768px wide. Overlapping names are hidden until there is room, for
   example after zooming in; all cafe pins remain visible. Smartphones never
@@ -87,6 +90,44 @@ When disabled, the panel stays hidden during loading and its recommendation
 cards are not rendered. Filters, map markers and the comparison table continue
 to work normally.
 
+### Map pin colours
+
+Edit **`docs/map-pins-config.json`** to change pin colours. The map pins and
+legend use this same configuration, so no CSS or JavaScript changes are needed:
+
+```json
+{
+  "bakery": { "color": "#B96745" },
+  "roastery": { "color": "#3C3C3C" },
+  "cafe": { "color": "#55296E" },
+  "pub": { "color": "#C2A13A" }
+}
+```
+
+| Venue kind | Fixed symbol | Default colour |
+|---|---|---|
+| `bakery` | Croissant | Terra-cotta `#B96745` |
+| `roastery` | Coffee bean | Dark grey `#3C3C3C` |
+| `cafe` | Coffee cup | Deep purple `#55296E` |
+| `pub` | Beer mug | Muted golden yellow `#C2A13A` |
+
+Keep all four keys and use a six-digit hex colour (`#RRGGBB`). Invalid or
+missing colours stop startup with an error instead of silently using other
+settings. Shapes are fixed by venue kind and do not change when colours are
+edited. Pin names/type labels remain accessible without relying on colour;
+the legend translates with the English/Korean UI. Closed venues remain
+slightly faded, preserving their type colour and shape.
+
+Commit colour edits to `main`, wait for GitHub Pages deployment and refresh
+the app. JSON is revalidated on each page load (`cache: "no-cache"`), so
+colour-only edits do not need an asset revision bump. For JavaScript, CSS or
+HTML changes, bump the shared `?v=` revision on all local assets in
+`docs/index.html`; `bootstrap.js` passes it to dynamically loaded `app.js`.
+
+The icons are vendored in `docs/icons/map-pins/` rather than loaded from a
+new CDN: the croissant is from Lucide and the filled coffee bean, cup and
+beer mug are from Phosphor. Their licence files are included in that folder.
+
 ## Opening hours
 
 - Hours are stored as periods per weekday (`mon`…`sun`). A break time is two
@@ -146,10 +187,13 @@ scripts are pinned to exact versions.
 ```text
 docs/
 ├── app.js          # Filters, hours logic, recommendations, map, table, UI
-├── bootstrap.js    # Loads the database and filter config before app.js starts
+├── bootstrap.js    # Loads database, filters and pin config before app.js starts
 ├── data-config.js  # Display options, regions, venue types, days, enums, internal filter behavior
 ├── filters-config.json # Editable filter labels, visibility and vertical order
 ├── filters-config.js   # Loads and validates the filter JSON
+├── map-pins-config.json # Editable venue pin/legend colours
+├── map-pins.js      # Loads pin config and creates shared marker/legend symbols
+├── icons/map-pins/ # Vendored venue symbols and their licences
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
 ├── i18n.js         # UI translations (en, ko)
 ├── index.html      # Page markup and third-party scripts

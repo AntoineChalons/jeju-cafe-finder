@@ -1,0 +1,6 @@
+{
+  "bakery": { "color": "#B96745" },
+  "roastery": { "color": "#3C3C3C" },
+  "cafe": { "color": "#55296E" },
+  "pub": { "color": "#C2A13A" }
+}

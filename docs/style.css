@@ -467,8 +467,42 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 .rec-empty { color: var(--color-text-muted); font-size: var(--text-sm); padding: 1rem 0; }
 
 /* ===== Map ===== */
-
-
+.map-legend-banner {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.6rem 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+.map-legend-title {
+  font-size: var(--text-xs); font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.map-legend {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.5rem 1.3rem;
+  list-style: none; margin: 0; padding: 0;
+}
+.map-legend-item {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-size: var(--text-xs); font-weight: 600;
+  white-space: nowrap; color: var(--color-text);
+}
+.map-pin-symbol {
+  display: inline-block; flex: 0 0 auto;
+  width: 28px; height: 28px;
+  pointer-events: none;
+}
+.map-pin-glyph {
+  display: block; width: 100%; height: 100%;
+  background-color: var(--pin-color);
+  -webkit-mask: var(--pin-icon) center / contain no-repeat;
+  mask: var(--pin-icon) center / contain no-repeat;
+}
+.map-legend-item .map-pin-symbol { width: 24px; height: 24px; }
 .map-wrap { position: relative; }
 #map {
   width: 100%;
@@ -491,12 +525,18 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 .map-empty p { font-size: var(--text-sm); color: var(--color-text-muted); }
 
 .cafe-marker {
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
+  transition: opacity var(--transition-interactive);
 }
+.map-pin-symbol {
+  /* A light halo keeps dark grey/purple shapes readable on either map theme. */
+  filter: drop-shadow(1px 0 0 #FFF8F0) drop-shadow(-1px 0 0 #FFF8F0)
+    drop-shadow(0 1px 0 #FFF8F0) drop-shadow(0 -1px 0 #FFF8F0)
+    drop-shadow(0 1px 2px rgba(45, 27, 22, 0.35));
+}
+.cafe-marker:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
 
 .maplibregl-popup-content {
   background: var(--color-surface) !important;
@@ -757,14 +797,7 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 
 .popup-meta { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 
-.cafe-marker {
-  width: 18px; height: 18px;
-  background: var(--color-primary);
-  border: 2.5px solid #FFF8F0;
-  box-shadow: 0 1px 4px rgba(45, 27, 22, 0.35);
-  transition: opacity var(--transition-interactive);
-}
-.cafe-marker.is-closed { opacity: 0.45; }
+.cafe-marker.is-closed { opacity: 0.65; }
 .cafe-marker-label { display: none; }
 .map-labels-enabled .cafe-marker-label {
   display: block;

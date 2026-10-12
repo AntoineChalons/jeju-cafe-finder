@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
 <script src="vendor/sql.js/sql-wasm.js"></script>
 
-<link rel="stylesheet" href="style.css?v=20261012-kind-filters-2" />
+<link rel="stylesheet" href="style.css?v=20261012-map-pin-kinds-3" />
 </head>
 <body>
 
@@ -102,6 +102,10 @@
     </section>
 
     <section class="panel map-panel" aria-label="Map" data-i18n-aria-label="map.title">
+      <div class="map-legend-banner" role="group" aria-labelledby="mapLegendTitle">
+        <h2 class="map-legend-title" id="mapLegendTitle" data-i18n="map.legend">Map key</h2>
+        <ul class="map-legend" id="mapLegend" data-testid="map-pin-legend"></ul>
+      </div>
       <div class="map-wrap">
         <div id="map" data-testid="map-cafes"></div>
         <div class="map-empty" id="mapEmpty" hidden>
@@ -134,10 +138,11 @@
 </div>
 
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261012-kind-filters-2"></script>
-<script src="data-config.js?v=20261012-kind-filters-2"></script>
-<script src="filters-config.js?v=20261012-kind-filters-2"></script>
-<script src="db-loader.js?v=20261012-kind-filters-2"></script>
-<script src="bootstrap.js?v=20261012-kind-filters-2"></script>
+<script src="i18n.js?v=20261012-map-pin-kinds-3"></script>
+<script src="data-config.js?v=20261012-map-pin-kinds-3"></script>
+<script src="filters-config.js?v=20261012-map-pin-kinds-3"></script>
+<script src="map-pins.js?v=20261012-map-pin-kinds-3"></script>
+<script src="db-loader.js?v=20261012-map-pin-kinds-3"></script>
+<script src="bootstrap.js?v=20261012-map-pin-kinds-3"></script>
 </body>
 </html>

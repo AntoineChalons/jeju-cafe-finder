@@ -346,6 +346,7 @@
       renderThemeToggle();
       renderLanguagePicker();
       renderControls();
+      renderMapLegend();
       renderTableHeader();
       update({ fit: false });
       setLanguageMenu(false);
@@ -840,18 +841,38 @@
     scheduleMapLabels();
   });
 
+  function renderMapLegend() {
+    var legend = document.getElementById("mapLegend");
+    legend.innerHTML = "";
+    window.MAP_PIN_KINDS.forEach(function (kind) {
+      var item = document.createElement("li");
+      item.className = "map-legend-item";
+      item.appendChild(window.createMapPinSymbol(kind));
+      var text = document.createElement("span");
+      text.textContent = message("map.pinTypes." + kind);
+      item.appendChild(text);
+      legend.appendChild(item);
+    });
+  }
+
+  function mapPinTitle(cafe) {
+    return cafeText(cafe).name + " · " + message("map.pinTypes." + cafe.kind);
+  }
+
   function createMarkers() {
     CAFES.forEach(function (cafe) {
       var element = document.createElement("div");
       element.className = "cafe-marker";
       element.setAttribute("data-testid", "marker-" + cafe.id);
+      element.setAttribute("data-kind", cafe.kind);
+      element.appendChild(window.createMapPinSymbol(cafe.kind));
       var label = document.createElement("span");
       label.className = "cafe-marker-label";
       label.textContent = cafeText(cafe).name;
       label.setAttribute("aria-hidden", "true");
       element.appendChild(label);
-      element.setAttribute("aria-label", cafeText(cafe).name);
-      element.title = cafeText(cafe).name;
+      element.setAttribute("aria-label", mapPinTitle(cafe));
+      element.title = mapPinTitle(cafe);
 
       var popup = new maplibregl.Popup({ offset: 14, maxWidth: "290px", focusAfterOpen: false })
         .setHTML(buildPopupHtml(cafe));
@@ -894,8 +915,8 @@
       if (visibleIds[id]) {
         var cafe = cafesById[id];
         element.querySelector(".cafe-marker-label").textContent = cafeText(cafe).name;
-        element.setAttribute("aria-label", cafeText(cafe).name);
-        element.title = cafeText(cafe).name;
+        element.setAttribute("aria-label", mapPinTitle(cafe));
+        element.title = mapPinTitle(cafe);
         element.classList.toggle("is-closed", hoursStatus(cafe).state === "closed");
         marker.getPopup().setHTML(buildPopupHtml(cafe));
       }
@@ -1201,6 +1222,7 @@
   }, 30000);
 
   renderControls();
+  renderMapLegend();
   renderTableHeader();
   update();
 })();

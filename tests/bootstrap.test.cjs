@@ -9,7 +9,7 @@ const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
 const bootstrap = fs.readFileSync(path.join(docs, "bootstrap.js"), "utf8");
 
 test("HTML versions all local app assets with the same nonempty revision", () => {
-  const files = ["style.css", "i18n.js", "data-config.js", "filters-config.js", "db-loader.js", "bootstrap.js"];
+  const files = ["style.css", "i18n.js", "data-config.js", "filters-config.js", "map-pins.js", "db-loader.js", "bootstrap.js"];
   const revisions = files.map((file) => {
     const escaped = file.replace(/\./g, "\\.");
     const match = html.match(new RegExp('(?:src|href)="' + escaped + '\\?v=([^"]+)"'));
@@ -33,6 +33,7 @@ async function loadedAppSource(scriptSource) {
     URL, document, console,
     window: {
       loadCafeFilters: async () => [],
+      loadMapPins: async () => ({}),
       loadCafeDatabase: async () => {
         // The bootstrap executes synchronously, but the script is no longer
         // current when the database promise settles in a real browser.
