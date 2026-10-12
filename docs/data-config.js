@@ -2,6 +2,7 @@
 // translations are loaded from the generated SQLite database. They do not
 // live in this public repository.
 var REGIONS = ["North", "East", "South", "West"];
+var KINDS = ["cafe", "roastery", "bakery", "pub"];
 
 // Monday-first, matching the `day` values in the database.
 var DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];

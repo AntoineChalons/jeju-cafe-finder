@@ -70,6 +70,10 @@
     return message("regionName", { region: regionLabel(region) });
   }
 
+  function kindLabel(kind) {
+    return message("kinds." + kind);
+  }
+
   function sizeLabel(size) {
     return size ? message("sizes." + size) : "";
   }
@@ -388,7 +392,7 @@
    * Filter state
    * --------------------------------------------------------- */
   var state = {
-    region: "All",
+    kind: "All",
     criteria: {},
     sizes: {},
     prices: {},
@@ -396,7 +400,7 @@
   };
 
   function clearFilters() {
-    state.region = "All";
+    state.kind = "All";
     CRITERIA.forEach(function (criterion) {
       state.criteria[criterion.key] = false;
     });
@@ -421,9 +425,9 @@
     return Object.keys(map).filter(function (key) { return map[key]; });
   }
 
-  // Area, size and price narrow the pool; criteria are "must have".
+  // Venue type, size and price narrow the pool; criteria are "must have".
   function matchesScope(cafe) {
-    if (state.region !== "All" && cafe.region !== state.region) return false;
+    if (state.kind !== "All" && cafe.kind !== state.kind) return false;
     var sizes = selectedValues(state.sizes);
     if (sizes.length && sizes.indexOf(cafe.size) === -1) return false;
     var prices = selectedValues(state.prices);
@@ -447,28 +451,28 @@
   /* ---------------------------------------------------------
    * Filter controls
    * --------------------------------------------------------- */
-  var regionListEl = document.getElementById("regionList");
+  var kindListEl = document.getElementById("kindList");
   var criteriaListEl = document.getElementById("criteriaList");
   var sizeListEl = document.getElementById("sizeList");
   var priceListEl = document.getElementById("priceList");
 
-  function renderRegions() {
-    regionListEl.innerHTML = "";
-    ["All"].concat(REGIONS).forEach(function (region) {
+  function renderKinds() {
+    kindListEl.innerHTML = "";
+    ["All"].concat(KINDS).forEach(function (kind) {
       var label = document.createElement("label");
       label.className = "radio-chip";
       label.innerHTML =
-        '<input type="radio" name="region" value="' + region + '" data-testid="radio-region-' + region.toLowerCase() + '" />' +
-        "<span>" + escapeHtml(regionLabel(region)) + "</span>";
+        '<input type="radio" name="kind" value="' + kind + '" data-testid="radio-kind-' + kind.toLowerCase() + '" />' +
+        "<span>" + escapeHtml(kindLabel(kind)) + "</span>";
       var input = label.querySelector("input");
-      input.checked = state.region === region;
+      input.checked = state.kind === kind;
       input.addEventListener("change", function () {
         if (input.checked) {
-          state.region = region;
+          state.kind = kind;
           update();
         }
       });
-      regionListEl.appendChild(label);
+      kindListEl.appendChild(label);
     });
   }
 
@@ -513,7 +517,7 @@
   }
 
   function renderControls() {
-    renderRegions();
+    renderKinds();
     renderCriteria();
     renderToggleChips(sizeListEl, SIZES, state.sizes, sizeLabel, function (size) {
       return message("sizes." + size + "Hint");
@@ -1091,8 +1095,8 @@
   var recommendSub = document.getElementById("recommendSub");
 
   function recommendationScope() {
-    return state.region !== "All"
-      ? message("recommendations.scopeRegion", { region: regionName(state.region) })
+    return state.kind !== "All"
+      ? message("recommendations.scopeKind", { kind: kindLabel(state.kind) })
       : message("recommendations.scopeAll");
   }
 
@@ -1165,9 +1169,9 @@
 
   function renderSummary(filteredCount) {
     var count = "<strong>" + filteredCount + "</strong>";
-    resultsSummaryEl.innerHTML = state.region === "All"
+    resultsSummaryEl.innerHTML = state.kind === "All"
       ? message("summary.all", { count: count, total: CAFES.length })
-      : message("summary.region", { count: count, total: CAFES.length, region: escapeHtml(regionName(state.region)) });
+      : message("summary.kind", { count: count, total: CAFES.length, kind: escapeHtml(kindLabel(state.kind)) });
   }
 
   function update(options) {

@@ -16,11 +16,12 @@ var APP_TRANSLATIONS = {
     language: { choose: "Choose language", current: "Language: {language}" },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
-      area: "Area", areaRegion: "Area of the island", mustHave: "Must have", reset: "Reset",
+      kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
       clear: "Clear filters", toggle: "Toggle filters", size: "Size", price: "Price range",
       anyHint: "Select none to include all",
     },
     regions: { All: "All Jeju", North: "North", East: "East", South: "South", West: "West" },
+    kinds: { All: "All", cafe: "Cafes", roastery: "Roasters", bakery: "Bakers", pub: "Pub" },
     regionName: "{region} Jeju",
     sizes: {
       tiny: "Tiny", medium: "Medium", large: "Large",
@@ -34,9 +35,9 @@ var APP_TRANSLATIONS = {
       title: "Recommended for you",
       selected: "Ranked by how many of your {count} selected criteria each cafe matches{scope}",
       none: "No criteria selected yet — showing the most well-rounded cafes{scope}",
-      scopeRegion: " in {region}.",
+      scopeKind: " for {kind} across Jeju.",
       scopeAll: " island-wide.",
-      empty: "No cafes match this area, size and price yet — try widening them.",
+      empty: "No venues match this type, size and price yet. Try widening them.",
       noData: "No cafes have been added yet.",
       score: "{score}/{total} match",
     },
@@ -89,8 +90,8 @@ var APP_TRANSLATIONS = {
       email: "Email {email}",
     },
     summary: {
-      all: "{count} of {total} cafes match your filters",
-      region: "{count} of {total} cafes match your filters in {region}",
+      all: "{count} of {total} venues match your filters",
+      kind: "{count} of {total} venues match your filters · {kind}",
     },
     criteria: {
       openNow: "Open now", openTomorrow: "Open tomorrow", workFriendly: "Work friendly", localRoast: "Local roast",
@@ -121,11 +122,12 @@ var APP_TRANSLATIONS = {
     language: { choose: "언어 선택", current: "현재 언어: {language}" },
     theme: { toLight: "라이트 모드로 전환", toDark: "다크 모드로 전환" },
     filters: {
-      area: "지역", areaRegion: "제주 지역", mustHave: "필수 조건", reset: "초기화",
+      kind: "유형", kindGroup: "매장 유형", mustHave: "필수 조건", reset: "초기화",
       clear: "필터 지우기", toggle: "필터 열기/닫기", size: "규모", price: "가격대",
       anyHint: "선택하지 않으면 전체가 포함됩니다",
     },
     regions: { All: "제주 전체", North: "북부", East: "동부", South: "남부", West: "서부" },
+    kinds: { All: "전체", cafe: "카페", roastery: "로스터리", bakery: "베이커리", pub: "펍" },
     regionName: "제주 {region}",
     sizes: {
       tiny: "아담함", medium: "중간", large: "넓음",
@@ -139,9 +141,9 @@ var APP_TRANSLATIONS = {
       title: "추천 카페",
       selected: "선택한 조건 {count}개 중 일치하는 수로 순위를 매겼습니다{scope}",
       none: "아직 조건을 선택하지 않았습니다. 가장 다양한 조건을 갖춘 카페를 보여드립니다{scope}",
-      scopeRegion: ". {region} 기준입니다.",
+      scopeKind: ". 제주 전역의 {kind} 기준입니다.",
       scopeAll: ". 제주 전역 기준입니다.",
-      empty: "이 지역, 규모, 가격대에 맞는 카페가 아직 없습니다. 범위를 넓혀 보세요.",
+      empty: "이 유형, 규모, 가격대에 맞는 매장이 아직 없습니다. 범위를 넓혀 보세요.",
       noData: "아직 등록된 카페가 없습니다.",
       score: "{score}/{total} 조건 일치",
     },
@@ -195,7 +197,7 @@ var APP_TRANSLATIONS = {
     },
     summary: {
       all: "총 {total}곳 중 {count}곳이 필터와 일치합니다",
-      region: "{region}의 총 {total}곳 중 {count}곳이 필터와 일치합니다",
+      kind: "총 {total}곳 중 {count}곳이 필터와 일치합니다 · {kind}",
     },
     criteria: {
       openNow: "지금 영업 중", openTomorrow: "내일 영업", workFriendly: "작업하기 좋음", localRoast: "직접 로스팅",
