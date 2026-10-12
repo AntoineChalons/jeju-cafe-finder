@@ -198,14 +198,20 @@ Data changes belong in the private `jeju-cafe-data` repository, whose README
 documents every column.
 
 1. Edit `data/cafes.csv` for facts, coordinates, size, price, criteria, links
-   and English text. Set `publish` (second column) to `true` to show a cafe,
+   and English names/hours notes. Set `publish` (second column) to `true` to show a cafe,
    or `false` to keep it as a hidden draft.
-2. Edit `data/hours.csv` for opening periods.
-3. Edit `data/translations.csv` for the Korean name, description and hours note.
-4. Run the local validation and tests.
-5. Commit and push to `main`.
-6. Confirm that the `Publish cafe database` workflow succeeds and
+2. Edit `data/blurb.csv` for English descriptions, with columns `id,locale,blurb`
+   and exactly one `en` row per cafe, including drafts.
+3. Edit `data/hours.csv` for opening periods.
+4. Edit `data/translations.csv` for the Korean name, description and hours note.
+5. Run the local validation and tests.
+6. Commit and push to `main`.
+7. Confirm that the `Publish cafe database` workflow succeeds and
    `public-data/cafes.db` was updated.
+
+The data importer joins English descriptions into the existing SQLite
+`cafes.blurb` column. The finder database format is unchanged, so no runtime
+loader changes are needed for the separate `blurb.csv` source file.
 
 ## Add a criterion
 
