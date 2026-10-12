@@ -1,0 +1,19 @@
+[
+  { "name": "openNow", "enabled": true, "displayedText": "Open now", "index": 0 },
+  { "name": "openTomorrow", "enabled": true, "displayedText": "Open tomorrow", "index": 1 },
+  { "name": "workFriendly", "enabled": true, "displayedText": "Work friendly", "index": 2 },
+  { "name": "outdoor", "enabled": true, "displayedText": "Outdoor seating", "index": 3 },
+  { "name": "dessert", "enabled": true, "displayedText": "Desserts", "index": 4 },
+  { "name": "brunch", "enabled": true, "displayedText": "Brunch", "index": 5 },
+  { "name": "view", "enabled": true, "displayedText": "Beautiful view", "index": 6 },
+  { "name": "openEarly", "enabled": true, "displayedText": "Opens early", "index": 7 },
+  { "name": "books", "enabled": true, "displayedText": "Books", "index": 8 },
+  { "name": "boardGames", "enabled": true, "displayedText": "Board games", "index": 9 },
+  { "name": "pets", "enabled": true, "displayedText": "Pet friendly", "index": 10 },
+  { "name": "kids", "enabled": true, "displayedText": "Kids friendly", "index": 11 },
+  { "name": "loyalty", "enabled": true, "displayedText": "Loyalty reward", "index": 12 },
+  { "name": "localRoast", "enabled": false, "displayedText": "Local roast", "index": 13 },
+  { "name": "sellsBeans", "enabled": false, "displayedText": "Sells beans or ground coffee", "index": 14 },
+  { "name": "openSunday", "enabled": false, "displayedText": "Open on Sunday", "index": 15 },
+  { "name": "arcDiscount", "enabled": false, "displayedText": "ARC resident discount", "index": 16 }
+]

@@ -41,6 +41,37 @@ in the interface come from the loaded database.
 
 ## Display configuration
 
+### Must-have filters
+
+Edit **`docs/filters-config.json`** to configure the "Must have" list. No
+JavaScript changes are needed to rename, hide, enable or reorder existing filters:
+
+```json
+{ "name": "openNow", "enabled": true, "displayedText": "Open now", "index": 0 }
+```
+
+- `name`: stable internal filter identifier. Do not rename it.
+- `enabled`: `true` shows the filter; `false` removes it from the frontend,
+  including its comparison column and recommendation criteria.
+- `displayedText`: exact text shown in the filter list. It is never translated
+  when switching languages. Comparison-column tooltips use this text too;
+  compact column headings retain their translated short labels.
+- `index`: nonnegative integer controlling vertical order, sorted numerically
+  from lowest to highest. `0` is first, `1` is second, and so on. Use distinct
+  consecutive indexes for a predictable order; gaps are allowed and ties
+  preserve file order.
+
+The initial configuration keeps the current 13 filters enabled and includes
+`localRoast`, `sellsBeans`, `openSunday` and `arcDiscount` as disabled entries.
+Omitted filters are also hidden. Commit edits to `main`; GitHub Pages picks
+them up through its normal deployment. The browser reloads the JSON on page
+load, so refresh an already-open tab after deployment.
+
+Invalid names, duplicate names, missing fields or invalid field types stop
+startup with an error instead of silently using different settings.
+
+### Recommendations
+
 The "Recommended for you" panel is controlled by `SHOW_RECOMMENDATIONS` in
 `docs/data-config.js`:
 
@@ -112,8 +143,10 @@ scripts are pinned to exact versions.
 ```text
 docs/
 ├── app.js          # Filters, hours logic, recommendations, map, table, UI
-├── bootstrap.js    # Loads the database before app.js starts
-├── data-config.js  # Display options, areas, days, enums, criteria, early threshold
+├── bootstrap.js    # Loads the database and filter config before app.js starts
+├── data-config.js  # Display options, areas, days, enums, internal filter behavior
+├── filters-config.json # Editable filter labels, visibility and vertical order
+├── filters-config.js   # Loads and validates the filter JSON
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
 ├── i18n.js         # UI translations (en, ko)
 ├── index.html      # Page markup and third-party scripts
@@ -178,11 +211,13 @@ A stored criterion affects the data schema and the app. Update:
 
 1. `tools/schema.py`, `tools/db.py` and `data/cafes.csv` in `jeju-cafe-data`.
 2. `BOOLEAN_FIELDS` in `docs/db-loader.js`.
-3. The `CRITERIA` array in `docs/data-config.js`.
-4. `criteria` and `criteriaShort` labels for every locale in `docs/i18n.js`.
+3. The `CRITERION_DEFINITIONS` array in `docs/data-config.js` and an entry in
+   `docs/filters-config.json`.
+4. `criteriaShort` labels for every locale in `docs/i18n.js`.
 
-A criterion derived from hours only needs `computed: true` in `CRITERIA`, a
-case in `computedValue()` in `docs/app.js`, and labels.
+A criterion derived from hours only needs `computed: true` in
+`CRITERION_DEFINITIONS`, a case in `computedValue()` in `docs/app.js`, a JSON
+configuration entry and short labels.
 
 ## Add a language
 

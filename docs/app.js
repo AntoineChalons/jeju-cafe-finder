@@ -52,7 +52,7 @@
   }
 
   function criterionLabel(criterion) {
-    return message("criteria." + criterion.key, { time: EARLY_OPENING });
+    return criterion.displayedText;
   }
 
   function shortCriterionLabel(criterion) {
@@ -249,6 +249,7 @@
         });
       });
     }
+    if (key === "openSunday") return periodsOn(cafe, 6).length > 0;
     return false;
   }
 

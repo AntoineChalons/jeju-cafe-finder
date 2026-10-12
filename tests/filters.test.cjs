@@ -13,6 +13,9 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(docs, "data-config.js"), "utf8"), sandbox);
+vm.runInContext(fs.readFileSync(path.join(docs, "filters-config.js"), "utf8"), sandbox);
+const filterConfig = JSON.parse(fs.readFileSync(path.join(docs, "filters-config.json"), "utf8"));
+sandbox.window.configureCafeFilters(filterConfig);
 vm.runInContext(fs.readFileSync(path.join(docs, "i18n.js"), "utf8"), sandbox);
 const app = fs.readFileSync(path.join(docs, "app.js"), "utf8");
 vm.runInContext(
@@ -39,6 +42,57 @@ test("filter order, removals, and English/Korean labels", () => {
       assert.ok(sandbox.APP_TRANSLATIONS[locale].criteriaShort[criterion.key]);
     }
   }
+});
+
+test("JSON controls visibility and numeric order without mutating the config", () => {
+  const config = [
+    { name: "pets", enabled: true, displayedText: "My pet filter", index: 10 },
+    { name: "books", enabled: false, displayedText: "Books", index: 0 },
+    { name: "openNow", enabled: true, displayedText: "Open!", index: 2 },
+  ];
+  const original = JSON.stringify(config);
+  const filters = sandbox.window.configureCafeFilters(config);
+  assert.deepEqual(Array.from(filters, (entry) => entry.key), ["openNow", "pets"]);
+  assert.equal(filters[0].displayedText, "Open!");
+  assert.equal(filters[0].computed, true);
+  assert.equal(JSON.stringify(config), original);
+  sandbox.window.configureCafeFilters(filterConfig);
+});
+
+test("invalid config edits fail with an actionable error", () => {
+  const valid = { name: "pets", enabled: true, displayedText: "Pets", index: 0 };
+  for (const config of [
+    {},
+    [{ ...valid, name: "unknown" }],
+    [valid, valid],
+    [{ ...valid, enabled: "false" }],
+    [{ ...valid, displayedText: "" }],
+    [{ ...valid, index: -1 }],
+    [{ ...valid, index: 0.5 }],
+    [{ ...valid, index: "0" }],
+  ]) {
+    assert.throws(() => sandbox.window.configureCafeFilters(config), /filter/i);
+  }
+  sandbox.window.configureCafeFilters(filterConfig);
+});
+
+test("empty or fully disabled config exposes no criteria", () => {
+  assert.equal(sandbox.window.configureCafeFilters([]).length, 0);
+  assert.equal(sandbox.window.configureCafeFilters(filterConfig.map((entry) => ({
+    ...entry, enabled: false,
+  }))).length, 0);
+  sandbox.window.configureCafeFilters(filterConfig);
+});
+
+test("disabled legacy filters can be enabled, including computed Sunday hours", () => {
+  sandbox.window.configureCafeFilters(filterConfig.map((entry) => ({ ...entry, enabled: true })));
+  vm.runInContext(
+    "COMPUTED_KEYS = {}; CRITERIA.forEach(function (entry) { if (entry.computed) COMPUTED_KEYS[entry.key] = true; });",
+    sandbox
+  );
+  assert.equal(sandbox.hasCriterion(cafe({ sun: [{ open: 600, close: 1080 }] }), "openSunday"), true);
+  assert.equal(sandbox.hasCriterion(cafe({ mon: [{ open: 600, close: 1080 }] }), "openSunday"), false);
+  sandbox.window.configureCafeFilters(filterConfig);
 });
 
 test("early means strictly before 10 am on any day", () => {

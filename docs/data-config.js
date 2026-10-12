@@ -22,8 +22,9 @@ var SHOW_RECOMMENDATIONS = false;
 var SIZES = ["tiny", "medium", "large"];
 var PRICES = [1, 2, 3];
 
+// Internal behavior only. Labels, visibility and order live in filters-config.json.
 // `computed: true` criteria are derived from opening hours in app.js.
-var CRITERIA = [
+var CRITERION_DEFINITIONS = [
   { key: "openNow", icon: "clock", computed: true },
   { key: "openTomorrow", icon: "calendar-check", computed: true },
   { key: "workFriendly", icon: "laptop" },
@@ -37,4 +38,11 @@ var CRITERIA = [
   { key: "pets", icon: "paw-print" },
   { key: "kids", icon: "baby" },
   { key: "loyalty", icon: "stamp" },
+  { key: "localRoast", icon: "coffee" },
+  { key: "sellsBeans", icon: "bean" },
+  { key: "openSunday", icon: "calendar-days", computed: true },
+  { key: "arcDiscount", icon: "badge-percent" },
 ];
+
+// Populated by filters-config.js before app.js starts.
+var CRITERIA = [];
