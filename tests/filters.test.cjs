@@ -28,6 +28,53 @@ function cafe(hours = {}, hasHours = Object.keys(hours).length > 0) {
   return { hours, hasHours };
 }
 
+test("all filter labels use literal config text, never translation dictionaries", () => {
+  const labels = {
+    message() { throw new Error("Filter labels must not call the translator"); },
+    CRITERIA: [{ key: "outdoor", displayedText: "Outdoor seating" }],
+  };
+  vm.createContext(labels);
+  const start = app.indexOf("  function criterionLabel(");
+  const end = app.indexOf("  function regionLabel(");
+  vm.runInContext(app.slice(start, end), labels);
+  // Only the ordinary, non-filter table headings may use the translator.
+  labels.message = (key) => {
+    assert.ok(!key.startsWith("criteria"), "Filter translation lookup: " + key);
+    return key;
+  };
+  vm.runInContext(
+    app.slice(app.indexOf("  function tableColumns("), app.indexOf("  function renderTableHeader(")),
+    labels
+  );
+  const column = labels.tableColumns().find((entry) => entry.key === "outdoor");
+  assert.equal(column.label, "Outdoor seating");
+  assert.equal(column.title, "Outdoor seating");
+  assert.equal(column.noTranslate, true);
+  labels.message = () => { throw new Error("Unexpected translator call"); };
+  for (const displayedText of ["Outdoor seating", "Custom label {time}", "한글 <&> label"]) {
+    assert.equal(labels.criterionLabel({ displayedText }), displayedText);
+  }
+  assert.doesNotMatch(app, /message\("criteria(?:Short)?\./);
+});
+
+test("filter markup opts out of automatic translation and escapes literal text", () => {
+  const labels = {};
+  vm.createContext(labels);
+  vm.runInContext(
+    app.slice(app.indexOf("  function criterionLabel("), app.indexOf("  function regionLabel(")) +
+    app.slice(app.indexOf("  function escapeHtml("), app.indexOf("  function safeUrl(")),
+    labels
+  );
+  for (const className of ["crit-label", "popup-tag", "rec-tag", "rec-tag miss"]) {
+    assert.equal(
+      labels.criterionTextHtml({ displayedText: "Outdoor <&> {time}" }, className),
+      '<span translate="no" class="' + className + ' notranslate">Outdoor &lt;&amp;&gt; {time}</span>'
+    );
+  }
+  const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
+  assert.match(html, /id="criteriaList" translate="no"/);
+});
+
 test("filter order, removals, and English/Korean labels", () => {
   assert.deepEqual(Array.from(sandbox.CRITERIA, (entry) => entry.key), [
     "openNow", "openTomorrow", "workFriendly", "outdoor", "dessert",

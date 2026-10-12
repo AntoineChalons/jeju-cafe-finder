@@ -53,9 +53,11 @@ JavaScript changes are needed to rename, hide, enable or reorder existing filter
 - `name`: stable internal filter identifier. Do not rename it.
 - `enabled`: `true` shows the filter; `false` removes it from the frontend,
   including its comparison column and recommendation criteria.
-- `displayedText`: exact text shown in the filter list. It is never translated
-  when switching languages. Comparison-column tooltips use this text too;
-  compact column headings retain their translated short labels.
+- `displayedText`: exact text shown in the filter list, comparison-column
+  headings/tooltips, map-popup tags and recommendation tags. It never goes
+  through application translations or changes when switching languages.
+  These elements also use `translate="no"` and `notranslate` to opt out of
+  browser/automatic page translation; the rest of the UI still translates.
 - `index`: nonnegative integer controlling vertical order, sorted numerically
   from lowest to highest. `0` is first, `1` is second, and so on. Use distinct
   consecutive indexes for a predictable order; gaps are allowed and ties

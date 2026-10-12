@@ -52,11 +52,14 @@
   }
 
   function criterionLabel(criterion) {
+    // Configuration text is literal, never an i18n key or translated fallback.
     return criterion.displayedText;
   }
 
-  function shortCriterionLabel(criterion) {
-    return message("criteriaShort." + criterion.key);
+  function criterionTextHtml(criterion, className) {
+    // Both the browser and external translation services must leave this alone.
+    return '<span translate="no" class="' + className + ' notranslate">' +
+      escapeHtml(criterionLabel(criterion)) + "</span>";
   }
 
   function regionLabel(region) {
@@ -103,9 +106,11 @@
     document.getElementById("brandSub").setAttribute("data-i18n", brandSubtitleKey());
 
     document.querySelectorAll("[data-i18n]").forEach(function (element) {
+      if (element.closest('[translate="no"]')) return;
       element.textContent = message(element.getAttribute("data-i18n"), values);
     });
     document.querySelectorAll("[data-i18n-aria-label]").forEach(function (element) {
+      if (element.closest('[translate="no"]')) return;
       element.setAttribute("aria-label", message(element.getAttribute("data-i18n-aria-label")));
     });
   }
@@ -475,7 +480,7 @@
       label.innerHTML =
         '<input type="checkbox" data-testid="checkbox-' + criterion.key + '" />' +
         '<span class="crit-icon"><i data-lucide="' + criterion.icon + '"></i></span>' +
-        '<span class="crit-label">' + escapeHtml(criterionLabel(criterion)) + "</span>";
+        criterionTextHtml(criterion, "crit-label");
       var input = label.querySelector("input");
       input.checked = state.criteria[criterion.key];
       input.addEventListener("change", function () {
@@ -792,7 +797,7 @@
       .slice(0, 6)
       .map(function (key) {
         var criterion = CRITERIA.filter(function (item) { return item.key === key; })[0];
-        return '<span class="popup-tag">' + escapeHtml(criterionLabel(criterion)) + "</span>";
+        return criterionTextHtml(criterion, "popup-tag");
       })
       .join("");
     var naver = safeUrl(cafe.naverUrl);
@@ -959,7 +964,7 @@
       { key: "today", label: message("table.today") },
     ].concat(
       CRITERIA.map(function (criterion) {
-        return { key: criterion.key, label: shortCriterionLabel(criterion), title: criterionLabel(criterion) };
+        return { key: criterion.key, label: criterionLabel(criterion), title: criterionLabel(criterion), noTranslate: true };
       })
     ).concat([{ key: "match", label: message("table.match") }]);
   }
@@ -972,6 +977,10 @@
       th.setAttribute("data-testid", "th-" + column.key);
       th.setAttribute("tabindex", "0");
       th.setAttribute("role", "button");
+      if (column.noTranslate) {
+        th.setAttribute("translate", "no");
+        th.classList.add("notranslate");
+      }
       if (column.title) th.title = column.title;
       var inner = document.createElement("span");
       inner.className = "th-inner";
@@ -1127,8 +1136,7 @@
       var tags = comparedKeys
         .map(function (key) {
           var criterion = CRITERIA.filter(function (entry) { return entry.key === key; })[0];
-          return '<span class="rec-tag' + (hasCriterion(cafe, key) ? "" : " miss") + '">' +
-            escapeHtml(criterionLabel(criterion)) + "</span>";
+          return criterionTextHtml(criterion, "rec-tag" + (hasCriterion(cafe, key) ? "" : " miss"));
         })
         .join("");
 
