@@ -90,17 +90,17 @@ When disabled, the panel stays hidden during loading and its recommendation
 cards are not rendered. Filters, map markers and the comparison table continue
 to work normally.
 
-### Map pin colours
+### Map pin colours and sizes
 
-Edit **`docs/map-pins-config.json`** to change pin colours. The map pins and
-legend use this same configuration, so no CSS or JavaScript changes are needed:
+Edit **`docs/map-pins-config.json`** to change each venue type's pin colour
+and map icon width/height in pixels. No CSS or JavaScript changes are needed:
 
 ```json
 {
-  "bakery": { "color": "#B96745" },
-  "roastery": { "color": "#3C3C3C" },
-  "cafe": { "color": "#55296E" },
-  "pub": { "color": "#C2A13A" }
+  "bakery": { "color": "#B96745", "width": 28, "height": 28 },
+  "roastery": { "color": "#3C3C3C", "width": 28, "height": 28 },
+  "cafe": { "color": "#55296E", "width": 28, "height": 28 },
+  "pub": { "color": "#C2A13A", "width": 28, "height": 28 }
 }
 ```
 
@@ -111,16 +111,24 @@ legend use this same configuration, so no CSS or JavaScript changes are needed:
 | `cafe` | Coffee cup | Deep purple `#55296E` |
 | `pub` | Beer mug | Muted golden yellow `#C2A13A` |
 
-Keep all four keys and use a six-digit hex colour (`#RRGGBB`). Invalid or
-missing colours stop startup with an error instead of silently using other
-settings. Shapes are fixed by venue kind and do not change when colours are
-edited. Pin names/type labels remain accessible without relying on colour;
+Keep all four keys and use a six-digit hex colour (`#RRGGBB`). `width` and
+`height` are required positive integer pixel values, not strings with `px`.
+They can differ between venue types and from one another. For example,
+`"width": 36, "height": 32` creates a 36 × 32 px map icon box; the SVG
+preserves its proportions inside that box. The marker wrapper and popup
+offset automatically follow the configured dimensions. Defaults remain
+28 × 28 px. Legend icons stay at 24 × 24 px for consistent banner layout,
+while sharing the configured colours.
+
+Invalid or missing colours/dimensions stop startup with an error instead of
+silently using other settings. Shapes are fixed by venue kind and do not
+change when colours or sizes are edited. Pin names/type labels remain accessible without relying on colour;
 the legend translates with the English/Korean UI. Closed venues remain
 slightly faded, preserving their type colour and shape.
 
-Commit colour edits to `main`, wait for GitHub Pages deployment and refresh
+Commit colour/size edits to `main`, wait for GitHub Pages deployment and refresh
 the app. JSON is revalidated on each page load (`cache: "no-cache"`), so
-colour-only edits do not need an asset revision bump. For JavaScript, CSS or
+configuration-only edits do not need an asset revision bump. For JavaScript, CSS or
 HTML changes, bump the shared `?v=` revision on all local assets in
 `docs/index.html`; `bootstrap.js` passes it to dynamically loaded `app.js`.
 
@@ -191,7 +199,7 @@ docs/
 ├── data-config.js  # Display options, regions, venue types, days, enums, internal filter behavior
 ├── filters-config.json # Editable filter labels, visibility and vertical order
 ├── filters-config.js   # Loads and validates the filter JSON
-├── map-pins-config.json # Editable venue pin/legend colours
+├── map-pins-config.json # Editable venue pin colours and map icon pixel sizes
 ├── map-pins.js      # Loads pin config and creates shared marker/legend symbols
 ├── icons/map-pins/ # Vendored venue symbols and their licences
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js

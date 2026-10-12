@@ -44,8 +44,45 @@ test("fixed venue symbols and default colours follow the requested mapping", () 
     assert.equal(symbol.attributes["aria-hidden"], "true");
     assert.equal(symbol.children[0].className, "map-pin-glyph");
     assert.equal(symbol.style.values["--pin-color"], color);
+    assert.equal(symbol.style.values["--pin-width"], "28px");
+    assert.equal(symbol.style.values["--pin-height"], "28px");
     assert.equal(symbol.style.values["--pin-icon"], `url("icons/map-pins/${file}")`);
     assert.match(fs.readFileSync(path.join(docs, "icons/map-pins", file), "utf8"), /<svg/);
+  }
+});
+
+test("JSON controls independent pixel dimensions per kind and popup offset", () => {
+  const sandbox = runtime();
+  const edited = structuredClone(config);
+  edited.bakery.width = 40;
+  edited.bakery.height = 32;
+  edited.pub.width = 24;
+  edited.pub.height = 48;
+  sandbox.window.configureMapPins(edited);
+  const bakery = sandbox.window.createMapPinSymbol("bakery");
+  assert.equal(bakery.style.values["--pin-width"], "40px");
+  assert.equal(bakery.style.values["--pin-height"], "32px");
+  assert.equal(sandbox.window.mapPinPopupOffset("bakery"), 22);
+  const pub = sandbox.window.createMapPinSymbol("pub");
+  assert.equal(pub.style.values["--pin-width"], "24px");
+  assert.equal(pub.style.values["--pin-height"], "48px");
+  assert.equal(sandbox.window.mapPinPopupOffset("pub"), 26);
+  assert.equal(sandbox.window.createMapPinSymbol("cafe").style.values["--pin-width"], "28px");
+  edited.bakery.width = 99;
+  assert.equal(sandbox.window.createMapPinSymbol("bakery").style.values["--pin-width"], "40px");
+});
+
+test("missing and invalid pixel dimensions are rejected before startup", () => {
+  const sandbox = runtime();
+  for (const dimension of ["width", "height"]) {
+    for (const value of [undefined, null, 0, -1, 2.5, "28", "28px", true, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      const edited = structuredClone(config);
+      edited.cafe[dimension] = value;
+      assert.throws(
+        () => sandbox.window.configureMapPins(edited),
+        new RegExp("cafe requires a positive integer " + dimension + " in pixels")
+      );
+    }
   }
 });
 

@@ -874,7 +874,7 @@
       element.setAttribute("aria-label", mapPinTitle(cafe));
       element.title = mapPinTitle(cafe);
 
-      var popup = new maplibregl.Popup({ offset: 14, maxWidth: "290px", focusAfterOpen: false })
+      var popup = new maplibregl.Popup({ offset: window.mapPinPopupOffset(cafe.kind), maxWidth: "290px", focusAfterOpen: false })
         .setHTML(buildPopupHtml(cafe));
       // Refresh the open/closed state each time the popup opens, and move the
       // marker into the lower part of the map so the popup has room above it.

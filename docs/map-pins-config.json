@@ -1,6 +1,6 @@
 {
-  "bakery": { "color": "#B96745" },
-  "roastery": { "color": "#3C3C3C" },
-  "cafe": { "color": "#55296E" },
-  "pub": { "color": "#C2A13A" }
+  "bakery": { "color": "#B96745", "width": 28, "height": 28 },
+  "roastery": { "color": "#3C3C3C", "width": 28, "height": 28 },
+  "cafe": { "color": "#55296E", "width": 28, "height": 28 },
+  "pub": { "color": "#C2A13A", "width": 28, "height": 28 }
 }

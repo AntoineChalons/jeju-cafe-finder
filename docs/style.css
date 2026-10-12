@@ -493,7 +493,7 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 }
 .map-pin-symbol {
   display: inline-block; flex: 0 0 auto;
-  width: 28px; height: 28px;
+  width: var(--pin-width); height: var(--pin-height);
   pointer-events: none;
 }
 .map-pin-glyph {
@@ -525,7 +525,7 @@ html[lang="ko"] .brand-title { font-family: var(--font-display); }
 .map-empty p { font-size: var(--text-sm); color: var(--color-text-muted); }
 
 .cafe-marker {
-  width: 30px; height: 30px;
+  width: max-content; height: max-content; padding: 1px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: opacity var(--transition-interactive);
