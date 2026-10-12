@@ -28,6 +28,51 @@ function cafe(hours = {}, hasHours = Object.keys(hours).length > 0) {
   return { hours, hasHours };
 }
 
+test("venue kinds have the requested fixed values and translated labels", () => {
+  assert.deepEqual(Array.from(sandbox.KINDS), ["cafe", "roastery", "bakery", "pub"]);
+  assert.deepEqual(
+    ["All", ...sandbox.KINDS].map((kind) => sandbox.APP_TRANSLATIONS.en.kinds[kind]),
+    ["All", "Cafes", "Roasters", "Bakers", "Pub"]
+  );
+  for (const kind of ["All", ...sandbox.KINDS]) {
+    assert.ok(sandbox.APP_TRANSLATIONS.ko.kinds[kind]);
+  }
+  const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
+  assert.ok(html.indexOf('id="kindList"') < html.indexOf('id="criteriaList"'));
+  assert.doesNotMatch(html, /id="regionList"/);
+  assert.doesNotMatch(app, /state\.region|renderRegions/);
+});
+
+test("type filters narrow scope independently of region and combine with other filters", () => {
+  const scope = {
+    CRITERIA: [{ key: "outdoor" }], SIZES: sandbox.SIZES, PRICES: sandbox.PRICES,
+    hasCriterion: (entry, key) => entry[key] === true,
+  };
+  vm.createContext(scope);
+  vm.runInContext(app.slice(app.indexOf("  var state ="), app.indexOf("  var kindListEl")), scope);
+  const entry = { kind: "roastery", region: "South", size: "medium", price: 2, outdoor: true };
+  assert.equal(scope.matchesFilters(entry), true);
+  for (const kind of sandbox.KINDS) {
+    scope.state.kind = kind;
+    assert.equal(scope.matchesScope(entry), kind === entry.kind);
+    assert.equal(scope.matchesScope({ ...entry, kind }), true);
+  }
+  scope.state.kind = "roastery";
+  assert.equal(scope.matchesScope({ ...entry, region: "North" }), true);
+  scope.state.sizes.tiny = true;
+  assert.equal(scope.matchesScope(entry), false);
+  scope.state.sizes.tiny = false;
+  scope.state.prices[1] = true;
+  assert.equal(scope.matchesScope(entry), false);
+  scope.state.prices[1] = false;
+  scope.state.criteria.outdoor = true;
+  assert.equal(scope.matchesFilters(entry), true);
+  assert.equal(scope.matchesFilters({ ...entry, outdoor: false }), false);
+  scope.clearFilters();
+  assert.equal(scope.state.kind, "All");
+  assert.equal(scope.matchesFilters({ ...entry, kind: "pub", outdoor: false }), true);
+});
+
 test("all filter labels use literal config text, never translation dictionaries", () => {
   const labels = {
     message() { throw new Error("Filter labels must not call the translator"); },

@@ -59,6 +59,7 @@
       id: row.id,
       name: row.name,
       nameKr: row.name_kr,
+      kind: row.kind,
       region: row.region,
       lat: row.lat,
       lng: row.lng,
@@ -110,9 +111,11 @@
       // database already leaves them out; this also covers full local builds
       // and databases from before the column existed.
       var publishFilter = available.publish ? " WHERE publish = 1" : "";
+      // Keep the app usable while an older public database is being rebuilt.
+      var kindColumn = available.kind ? "kind" : "'cafe' AS kind";
       var cafes = rows(
         database,
-        "SELECT id, name, name_kr, region, lat, lng, size, price, " +
+        "SELECT id, name, name_kr, " + kindColumn + ", region, lat, lng, size, price, " +
           Object.keys(BOOLEAN_FIELDS).join(", ") +
           ", blurb, hours_note, hours_checked, naver_url, source_url, " +
           contactColumns.join(", ") +

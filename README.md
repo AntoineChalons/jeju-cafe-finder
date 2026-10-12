@@ -10,7 +10,8 @@ weekly opening hours.
 
 Users can:
 
-- Filter by area of the island (North, East, South, West).
+- Filter by venue type: All, Cafes, Roasters, Bakers or Pub. Region labels
+  remain available in the comparison table and map popups.
 - Require any of 13 criteria: open now, open tomorrow, work friendly, outdoor
   seating, desserts, brunch, beautiful view, opens early, books, board games,
   pet friendly, kids friendly and loyalty reward.
@@ -146,7 +147,7 @@ scripts are pinned to exact versions.
 docs/
 ├── app.js          # Filters, hours logic, recommendations, map, table, UI
 ├── bootstrap.js    # Loads the database and filter config before app.js starts
-├── data-config.js  # Display options, areas, days, enums, internal filter behavior
+├── data-config.js  # Display options, regions, venue types, days, enums, internal filter behavior
 ├── filters-config.json # Editable filter labels, visibility and vertical order
 ├── filters-config.js   # Loads and validates the filter JSON
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
