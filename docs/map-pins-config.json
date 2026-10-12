@@ -1,6 +1,6 @@
 {
-  "bakery": { "color": "#B96745", "width": 28, "height": 28 },
-  "roastery": { "color": "#3C3C3C", "width": 28, "height": 28 },
-  "cafe": { "color": "#55296E", "width": 28, "height": 28 },
-  "pub": { "color": "#C2A13A", "width": 28, "height": 28 }
+  "bakery": { "color": "#B96745", "width": 20, "height": 20 },
+  "roastery": { "color": "#3C3C3C", "width": 20, "height": 20 },
+  "cafe": { "color": "#426E29", "width": 20, "height": 20 },
+  "pub": { "color": "#C2A13A", "width": 20, "height": 20 }
 }
