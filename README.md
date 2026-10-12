@@ -11,10 +11,9 @@ weekly opening hours.
 Users can:
 
 - Filter by area of the island (North, East, South, West).
-- Require any of 16 criteria: open now, work friendly, local roast, sells beans
-  or ground coffee, outdoor seating, desserts, brunch, overlooks a view, opens
-  early, open on Sunday, ARC resident discount, loyalty reward, books, board
-  games, pet friendly and kids friendly.
+- Require any of 13 criteria: open now, open tomorrow, work friendly, outdoor
+  seating, desserts, brunch, beautiful view, opens early, books, board games,
+  pet friendly, kids friendly and loyalty reward.
 - Narrow by size (tiny ≤ 10 seats, medium 11–20, large > 20) and price range
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
@@ -63,9 +62,12 @@ to work normally.
   (e.g. `18:00–02:00`), and the app keeps the cafe open into the next day.
 - Status is always computed in Korea time (`Asia/Seoul`), whatever the
   visitor's device time zone is, and refreshes every minute.
-- `Open now`, `Opens early` and `Open on Sunday` are derived from the hours,
-  not stored. The early threshold is `EARLY_OPENING` in `docs/data-config.js`
-  (default `08:00`).
+- `Open now`, `Open tomorrow` and `Opens early` are derived from the hours,
+  not stored. `Open tomorrow` matches cafes with any scheduled opening period
+  tomorrow in Korea time, including today's overnight periods extending past
+  midnight; unknown hours do not match. `Opens early` means opening strictly
+  before `EARLY_OPENING` in `docs/data-config.js` (default `10:00`) on at least
+  one day of the week.
 - For testing, `?at=sat-23:30` freezes the clock at that Korea weekday and time.
 
 ## Data architecture

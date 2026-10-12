@@ -233,14 +233,22 @@
 
   function computedValue(cafe, key) {
     if (key === "openNow") return hoursStatus(cafe).state === "open";
+    if (key === "openTomorrow") {
+      if (!cafe.hasHours) return false;
+      // Include both tomorrow's scheduled periods and today's periods that
+      // continue into tomorrow. Closing exactly at midnight does not count.
+      return periodsOn(cafe, now.day + 1).length > 0 ||
+        periodsOn(cafe, now.day).some(function (period) {
+          return periodEnd(period) > MINUTES_PER_DAY;
+        });
+    }
     if (key === "openEarly") {
       return DAYS.some(function (day) {
         return (cafe.hours[day] || []).some(function (period) {
-          return period.open <= EARLY_MINUTES;
+          return period.open < EARLY_MINUTES;
         });
       });
     }
-    if (key === "openSunday") return (cafe.hours.sun || []).length > 0;
     return false;
   }
 
