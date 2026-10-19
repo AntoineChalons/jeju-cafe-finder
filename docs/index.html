@@ -19,6 +19,7 @@
 <script src="vendor/sql.js/sql-wasm.js"></script>
 
 <link rel="stylesheet" href="style.css?v=20261012-map-pin-size-4" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261019-type-in-banner" />
 </head>
 <body>
 
@@ -40,11 +41,6 @@
     </div>
 
     <div class="sidebar-scroll">
-      <section class="filter-group">
-        <h2 class="filter-title" data-i18n="filters.kind">Type</h2>
-        <div class="radio-row" id="kindList" role="radiogroup" aria-label="Venue type" data-i18n-aria-label="filters.kindGroup"></div>
-      </section>
-
       <section class="filter-group">
         <div class="filter-title-row">
           <h2 class="filter-title" data-i18n="filters.mustHave">Must have</h2>
@@ -103,8 +99,9 @@
 
     <section class="panel map-panel" aria-label="Map" data-i18n-aria-label="map.title">
       <div class="map-legend-banner" role="group" aria-labelledby="mapLegendTitle">
-        <h2 class="map-legend-title" id="mapLegendTitle" data-i18n="map.legend">Map key</h2>
-        <ul class="map-legend" id="mapLegend" data-testid="map-pin-legend"></ul>
+        <h2 class="map-legend-title" id="mapLegendTitle" data-i18n="filters.kind">Type</h2>
+        <div class="radio-row" id="kindList" role="radiogroup" aria-label="Venue type" data-i18n-aria-label="filters.kindGroup"></div>
+        <ul class="map-legend" id="mapLegend" data-testid="map-pin-legend" hidden></ul>
       </div>
       <div class="map-wrap">
         <div id="map" data-testid="map-cafes"></div>

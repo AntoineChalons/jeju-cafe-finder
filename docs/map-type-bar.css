@@ -1,0 +1,2 @@
+.map-legend-banner .radio-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.map-legend-banner #mapLegend { display: none; }
