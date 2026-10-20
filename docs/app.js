@@ -5,45 +5,15 @@
    * Localization
    * --------------------------------------------------------- */
   var root = document.documentElement;
-  var SUPPORTED_LOCALES = ["en", "ko"];
-  var LOCALE_NAMES = { en: "English", ko: "한국어" };
-  var LOCALE_CODES = { en: "EN", ko: "한" };
-
-  function isSupportedLocale(locale) {
-    return SUPPORTED_LOCALES.indexOf(locale) !== -1;
-  }
-
-  function browserLocale() {
-    var languages = window.navigator.languages && window.navigator.languages.length
-      ? window.navigator.languages
-      : [window.navigator.language || "en"];
-
-    for (var i = 0; i < languages.length; i += 1) {
-      var language = String(languages[i]).toLowerCase();
-      if (language.indexOf("ko") === 0) return "ko";
-      if (language.indexOf("en") === 0) return "en";
-    }
-    return "en";
-  }
-
-  function initialLocale() {
-    var requested = new URLSearchParams(window.location.search).get("lang");
-    return isSupportedLocale(requested) ? requested : browserLocale();
-  }
-
-  var currentLocale = initialLocale();
 
   function message(key, values) {
     var parts = key.split(".");
-    var value = APP_TRANSLATIONS[currentLocale] || APP_TRANSLATIONS.en;
-    var fallback = APP_TRANSLATIONS.en;
+    var text = APP_TRANSLATIONS.en;
 
     parts.forEach(function (part) {
-      value = value && value[part];
-      fallback = fallback && fallback[part];
+      text = text && text[part];
     });
 
-    var text = typeof value === "string" ? value : fallback;
     if (typeof text !== "string") return key;
 
     return text.replace(/\{(\w+)\}/g, function (_, token) {
@@ -83,12 +53,10 @@
   }
 
   function cafeText(cafe) {
-    var translations = CAFE_TRANSLATIONS[cafe.id] || {};
-    var localized = translations[currentLocale] || {};
     return {
-      name: localized.name || (currentLocale === "ko" ? cafe.nameKr : cafe.name),
-      blurb: localized.blurb || cafe.blurb,
-      hoursNote: currentLocale === "en" ? cafe.hoursNote : (localized.hoursNote || cafe.hoursNote),
+      name: cafe.name,
+      blurb: cafe.blurb,
+      hoursNote: cafe.hoursNote,
     };
   }
 
@@ -104,7 +72,6 @@
 
   function applyStaticTranslations() {
     var values = { count: CAFES.length };
-    root.lang = currentLocale;
     document.title = message("meta.title");
     document.querySelector('meta[name="description"]').setAttribute("content", message("meta.description"));
     document.getElementById("brandSub").setAttribute("data-i18n", brandSubtitleKey());
@@ -301,75 +268,8 @@
     applyTheme();
   });
 
-  /* ---------------------------------------------------------
-   * Language menu
-   * --------------------------------------------------------- */
-  var languageToggle = document.getElementById("languageToggle");
-  var languageMenu = document.getElementById("languageMenu");
-  var languageCode = document.getElementById("languageCode");
-
-  function setLanguageMenu(open) {
-    languageMenu.hidden = !open;
-    languageToggle.setAttribute("aria-expanded", String(open));
-  }
-
-  function renderLanguagePicker() {
-    languageCode.textContent = LOCALE_CODES[currentLocale];
-    languageToggle.setAttribute(
-      "aria-label",
-      message("language.current", { language: LOCALE_NAMES[currentLocale] })
-    );
-    languageMenu.setAttribute("aria-label", message("language.choose"));
-    languageMenu.querySelectorAll("[data-language]").forEach(function (button) {
-      var active = button.getAttribute("data-language") === currentLocale;
-      button.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-  }
-
-  function updateLanguageUrl() {
-    var url = new URL(window.location.href);
-    url.searchParams.set("lang", currentLocale);
-    window.history.replaceState({}, "", url);
-  }
-
-  languageToggle.addEventListener("click", function () {
-    setLanguageMenu(languageMenu.hidden);
-  });
-
-  languageMenu.querySelectorAll("[data-language]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      var locale = button.getAttribute("data-language");
-      if (!isSupportedLocale(locale)) return;
-      currentLocale = locale;
-      updateLanguageUrl();
-      applyStaticTranslations();
-      renderThemeToggle();
-      renderLanguagePicker();
-      renderControls();
-      renderMapLegend();
-      renderTableHeader();
-      update({ fit: false });
-      setLanguageMenu(false);
-      languageToggle.focus();
-    });
-  });
-
-  document.addEventListener("click", function (event) {
-    if (!languageMenu.hidden && !languageMenu.parentElement.contains(event.target)) {
-      setLanguageMenu(false);
-    }
-  });
-
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !languageMenu.hidden) {
-      setLanguageMenu(false);
-      languageToggle.focus();
-    }
-  });
-
   applyStaticTranslations();
   applyTheme();
-  renderLanguagePicker();
 
   /* ---------------------------------------------------------
    * Mobile sidebar toggle
@@ -1047,7 +947,7 @@
 
   function sortValue(cafe, key, comparedKeys) {
     if (key === "match") return matchCount(cafe, comparedKeys);
-    if (key === "name") return cafeText(cafe).name.toLocaleLowerCase(currentLocale);
+    if (key === "name") return cafeText(cafe).name.toLocaleLowerCase("en");
     if (key === "region") return regionLabel(cafe.region);
     if (key === "size") return cafe.size ? SIZE_ORDER[cafe.size] : 9;
     if (key === "price") return cafe.price || 9;
@@ -1065,7 +965,7 @@
       var bValue = sortValue(b, state.sort.key, comparedKeys);
       if (aValue < bValue) return -1 * direction;
       if (aValue > bValue) return 1 * direction;
-      return cafeText(a).name.localeCompare(cafeText(b).name, currentLocale);
+      return cafeText(a).name.localeCompare(cafeText(b).name, "en");
     });
 
     tableBody.innerHTML = "";
@@ -1149,7 +1049,7 @@
       })
       .sort(function (a, b) {
         if (b.score !== a.score) return b.score - a.score;
-        return cafeText(a.cafe).name.localeCompare(cafeText(b.cafe).name, currentLocale);
+        return cafeText(a.cafe).name.localeCompare(cafeText(b.cafe).name, "en");
       })
       .slice(0, 3);
 

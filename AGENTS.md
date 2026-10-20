@@ -30,7 +30,7 @@ Runtime data flow: CSV -> validate -> SQLite -> public-data/cafes.db -> `docs/db
   - `docs/filters-config.json` holds filter labels, visibility and order. Never rename `name`. `displayedText` is intentionally not translated (`translate="no"`).
   - `docs/map-pins-config.json` holds pin colours and sizes. Keep all 4 keys (bakery, roastery, cafe, pub), `#RRGGBB` colours and integer pixel sizes.
   - Invalid config must fail at startup with a clear error, never fall back silently.
-- UI strings live in `docs/i18n.js` (en, ko). Every new string needs both locales.
+- The UI is English-only. Every UI string lives in `docs/i18n.js` under `en`. Do not add other locales, a language picker or translated data. The Korean cafe name (`name_kr`) stays as data and is shown under the display name.
 - Cache busting: after any JS, CSS or HTML change, bump the shared `?v=` revision on all local assets in `docs/index.html`. JSON config changes need no bump.
 - Smartphones never show map labels, even in landscape. Labels appear only on non-phone landscape screens >= 768px, and overlapping labels are hidden.
 - Accessibility: do not rely on colour alone, support light and dark mode, test at mobile widths.
@@ -40,13 +40,8 @@ Runtime data flow: CSV -> validate -> SQLite -> public-data/cafes.db -> `docs/db
 ### Add a criterion
 
 Data repo: `tools/schema.py`, `tools/db.py`, `data/cafes.csv`.
-Finder: `BOOLEAN_FIELDS` in `docs/db-loader.js`; `CRITERION_DEFINITIONS` in `docs/data-config.js`; an entry in `docs/filters-config.json`; `criteriaShort` labels for every locale in `docs/i18n.js`.
+Finder: `BOOLEAN_FIELDS` in `docs/db-loader.js`; `CRITERION_DEFINITIONS` in `docs/data-config.js`; an entry in `docs/filters-config.json`; English `criteriaShort` labels in `docs/i18n.js`.
 If derived from hours: `computed: true` in `CRITERION_DEFINITIONS` plus a case in `computedValue()` in `docs/app.js`.
-
-### Add a language
-
-Data repo: `LOCALES` in `tools/schema.py`, the `CHECK` constraint in `tools/db.py`, a `translations.csv` row per cafe.
-Finder: `APP_TRANSLATIONS` in `docs/i18n.js`; `SUPPORTED_LOCALES`, `LOCALE_NAMES`, `LOCALE_CODES` and `browserLocale()` in `docs/app.js`; a button in the language menu in `docs/index.html`.
 
 ## Output format
 

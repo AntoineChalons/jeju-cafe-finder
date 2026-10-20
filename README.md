@@ -36,7 +36,7 @@ Users can:
 - Only cafes marked `publish=true` in the data appear. Drafts
   (`publish=false`) are left out of the public database, and the app also
   ignores any row with `publish = 0`.
-- Switch between English and Korean.
+- Use the English-only UI, with Korean cafe names shown under display names.
 - Use the responsive interface in light or dark mode.
 
 The browser downloads a generated SQLite database and queries it with sql.js.
@@ -59,7 +59,7 @@ JavaScript changes are needed to rename, hide, enable or reorder existing filter
   including its comparison column and recommendation criteria.
 - `displayedText`: exact text shown in the filter list, comparison-column
   headings/tooltips, map-popup tags and recommendation tags. It never goes
-  through application translations or changes when switching languages.
+  through the UI string dictionary.
   These elements also use `translate="no"` and `notranslate` to opt out of
   browser/automatic page translation; the rest of the UI still translates.
 - `index`: nonnegative integer controlling vertical order, sorted numerically
@@ -123,7 +123,7 @@ while sharing the configured colours.
 Invalid or missing colours/dimensions stop startup with an error instead of
 silently using other settings. Shapes are fixed by venue kind and do not
 change when colours or sizes are edited. Pin names/type labels remain accessible without relying on colour;
-the legend translates with the English/Korean UI. Closed venues remain
+the legend uses English labels. Closed venues remain
 slightly faded, preserving their type colour and shape.
 
 Commit colour/size edits to `main`, wait for GitHub Pages deployment and refresh
@@ -157,7 +157,7 @@ beer mug are from Phosphor. Their licence files are included in that folder.
 
 | Repository | Visibility | Purpose |
 |---|---|---|
-| `AntoineChalons/jeju-cafe-finder` | Public | Static web app and UI translations |
+| `AntoineChalons/jeju-cafe-finder` | Public | Static web app and English UI strings |
 | `AntoineChalons/jeju-cafe-data` | Private | Source CSV files, validation, tests and SQLite build tools |
 | [`AntoineChalons/public-data`](https://github.com/AntoineChalons/public-data) | Public | Generated `cafes.db` artifact |
 
@@ -203,7 +203,7 @@ docs/
 ├── map-pins.js      # Loads pin config and creates shared marker/legend symbols
 ├── icons/map-pins/ # Vendored venue symbols and their licences
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
-├── i18n.js         # UI translations (en, ko)
+├── i18n.js         # English UI strings (en)
 ├── index.html      # Page markup and third-party scripts
 ├── style.css       # Design tokens and responsive styling
 └── vendor/sql.js/  # Pinned sql.js runtime and license
@@ -218,7 +218,7 @@ private CSV files
   -> validation and SQLite build
   -> public-data/cafes.db
   -> db-loader.js
-  -> CAFES and CAFE_TRANSLATIONS
+  -> CAFES
   -> app.js
 ```
 
@@ -256,15 +256,17 @@ documents every column.
 2. Edit `data/blurb.csv` for English descriptions, with columns `id,locale,blurb`
    and exactly one `en` row per cafe, including drafts.
 3. Edit `data/hours.csv` for opening periods.
-4. Edit `data/translations.csv` for the Korean name, description and hours note.
-5. Run the local validation and tests.
-6. Commit and push to `main`.
-7. Confirm that the `Publish cafe database` workflow succeeds and
+4. Run the local validation and tests.
+5. Commit and push to `main`.
+6. Confirm that the `Publish cafe database` workflow succeeds and
    `public-data/cafes.db` was updated.
 
 The data importer joins English descriptions into the existing SQLite
 `cafes.blurb` column. The finder database format is unchanged, so no runtime
 loader changes are needed for the separate `blurb.csv` source file.
+The finder reads English names, descriptions and hours notes from `cafes`.
+The Korean cafe name (`name_kr`) is data, not a translated UI string, and
+remains visible under the display name.
 
 ## Add a criterion
 
@@ -274,20 +276,11 @@ A stored criterion affects the data schema and the app. Update:
 2. `BOOLEAN_FIELDS` in `docs/db-loader.js`.
 3. The `CRITERION_DEFINITIONS` array in `docs/data-config.js` and an entry in
    `docs/filters-config.json`.
-4. `criteriaShort` labels for every locale in `docs/i18n.js`.
+4. English `criteriaShort` labels in `docs/i18n.js`.
 
 A criterion derived from hours only needs `computed: true` in
 `CRITERION_DEFINITIONS`, a case in `computedValue()` in `docs/app.js`, a JSON
 configuration entry and short labels.
-
-## Add a language
-
-1. Add the locale to `LOCALES` in `tools/schema.py` and the `CHECK` constraint
-   in `tools/db.py`, then add a `translations.csv` row per cafe.
-2. Add a block to `APP_TRANSLATIONS` in `docs/i18n.js`.
-3. Add it to `SUPPORTED_LOCALES`, `LOCALE_NAMES`, `LOCALE_CODES` and
-   `browserLocale()` in `docs/app.js`, and a button in the language menu in
-   `docs/index.html`.
 
 ## Design decisions
 
@@ -297,8 +290,8 @@ configuration entry and short labels.
   toggle still supports dark mode, and the choice is not stored.
 - Map pins use one theme-aware accent colour for every area. Closed cafes
   remain faded, as explained in the map subtitle; there is no colour legend.
-- Language follows browser preferences, with `?lang=en` or `?lang=ko` as a
-  shareable override. No IP-based detection.
+- The UI is English-only regardless of browser language. All UI strings
+  live under `en` in `docs/i18n.js`; Korean cafe names remain as data.
 - MapLibre and OpenFreeMap provide the map without an API key; cafe names link
   to Naver Map rather than an embedded Naver SDK.
 - Classifications are conservative: a criterion is `1` only when confirmed.

@@ -1,4 +1,4 @@
-/* UI translations for the static dashboard. Cafe names, descriptions and
+/* English UI strings for the static dashboard. Cafe names, descriptions and
  * hours notes are stored in the generated SQLite database. */
 var APP_TRANSLATIONS = {
   en: {
@@ -13,7 +13,9 @@ var APP_TRANSLATIONS = {
       loading: "Loading cafe data…",
       logoLabel: "Jeju Cafe Finder logo",
     },
-    language: { choose: "Choose language", current: "Language: {language}" },
+    errors: {
+      load: "Cafe data or display configuration is not available. Refresh the page or try again later.",
+    },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
       kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
@@ -107,114 +109,6 @@ var APP_TRANSLATIONS = {
       outdoor: "Outdoor", dessert: "Dessert", brunch: "Brunch", view: "View", openEarly: "Early",
       openSunday: "Sunday", arcDiscount: "ARC", loyalty: "Loyalty", books: "Books",
       boardGames: "Games", pets: "Pets", kids: "Kids",
-    },
-  },
-  ko: {
-    meta: {
-      title: "제주 카페 파인더 — 카페 비교 및 선택",
-      description: "제주도 카페를 고르기 위한 필터, 영업시간, 지도와 추천 기능을 제공합니다.",
-    },
-    brand: {
-      title: "제주 카페 파인더",
-      subtitle: "카페 {count}곳, 좋은 커피 한 잔",
-      subtitleEmpty: "아직 등록된 카페가 없습니다",
-      loading: "카페 데이터를 불러오는 중…",
-      logoLabel: "제주 카페 파인더 로고",
-    },
-    language: { choose: "언어 선택", current: "현재 언어: {language}" },
-    theme: { toLight: "라이트 모드로 전환", toDark: "다크 모드로 전환" },
-    filters: {
-      kind: "유형", kindGroup: "매장 유형", mustHave: "필수 조건", reset: "초기화",
-      clear: "필터 지우기", toggle: "필터 열기/닫기", size: "규모", price: "가격대",
-      anyHint: "선택하지 않으면 전체가 포함됩니다",
-    },
-    regions: { All: "제주 전체", North: "북부", East: "동부", South: "남부", West: "서부" },
-    kinds: { All: "전체", cafe: "카페", roastery: "로스터리", bakery: "베이커리", pub: "펍" },
-    regionName: "제주 {region}",
-    sizes: {
-      tiny: "아담함", medium: "중간", large: "넓음",
-      tinyHint: "10석 이하", mediumHint: "11~20석", largeHint: "20석 초과",
-    },
-    prices: { 1: "저렴", 2: "보통", 3: "고급" },
-    page: {
-      title: "제주 카페를 비교하고 지도에서 골라 보세요",
-    },
-    recommendations: {
-      title: "추천 카페",
-      selected: "선택한 조건 {count}개 중 일치하는 수로 순위를 매겼습니다{scope}",
-      none: "아직 조건을 선택하지 않았습니다. 가장 다양한 조건을 갖춘 카페를 보여드립니다{scope}",
-      scopeKind: ". 제주 전역의 {kind} 기준입니다.",
-      scopeAll: ". 제주 전역 기준입니다.",
-      empty: "이 유형, 규모, 가격대에 맞는 매장이 아직 없습니다. 범위를 넓혀 보세요.",
-      noData: "아직 등록된 카페가 없습니다.",
-      score: "{score}/{total} 조건 일치",
-    },
-    map: {
-      title: "지도",
-      legend: "지도 범례",
-      pinTypes: { bakery: "베이커리", roastery: "로스터리", cafe: "카페", pub: "펍" },
-      empty: "선택한 모든 필터에 맞는 카페가 없습니다.",
-      noData: "아직 등록된 카페가 없습니다.",
-      viewNaver: "네이버 지도에서 보기",
-      source: "출처:",
-      reference: "참고",
-      showOnMap: "지도에서 보기",
-    },
-    hours: {
-      open: "영업 중",
-      closed: "영업 종료",
-      unknown: "영업시간 미확인",
-      today: "오늘",
-      tomorrow: "내일",
-      closedToday: "오늘 휴무",
-      closesAt: "{time}에 마감",
-      opensAt: "{time}에 오픈",
-      opensDayAt: "{day} {time}에 오픈",
-      showWeek: "요일별 영업시간 보기",
-      hideWeek: "요일별 영업시간 숨기기",
-      checked: "영업시간 확인일 {date}",
-      timeZone: "한국 시간",
-      separator: ", ",
-    },
-    days: {
-      short: { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" },
-      long: { mon: "월요일", tue: "화요일", wed: "수요일", thu: "목요일", fri: "금요일", sat: "토요일", sun: "일요일" },
-    },
-    table: {
-      title: "모든 카페 비교",
-      subtitle: "열 제목을 누르면 정렬됩니다. 카페 이름을 누르면 네이버 지도에서 열립니다.",
-      empty: "선택한 모든 필터에 맞는 카페가 없습니다. 조건 하나를 해제해 보세요.",
-      noData: "아직 등록된 카페가 없습니다.",
-      cafe: "카페", area: "지역", size: "규모", price: "가격", today: "오늘", match: "일치",
-      unknown: "—",
-    },
-    contact: {
-      title: "연락처",
-      instagram: "인스타그램",
-      facebook: "페이스북",
-      kakaoChannel: "카카오톡 채널",
-      kakaoId: "카카오톡 ID",
-      copyKakao: "카카오톡 ID {id} 복사",
-      copied: "복사됨",
-      call: "{phone}로 전화",
-      email: "{email}로 이메일 보내기",
-    },
-    summary: {
-      all: "총 {total}곳 중 {count}곳이 필터와 일치합니다",
-      kind: "총 {total}곳 중 {count}곳이 필터와 일치합니다 · {kind}",
-    },
-    criteria: {
-      openNow: "지금 영업 중", openTomorrow: "내일 영업", workFriendly: "작업하기 좋음", localRoast: "직접 로스팅",
-      sellsBeans: "원두·분쇄 커피 판매", outdoor: "야외 좌석", dessert: "디저트",
-      brunch: "브런치", view: "아름다운 전망", openEarly: "이른 오픈",
-      openSunday: "일요일 영업", arcDiscount: "외국인등록증 도민 할인", loyalty: "적립·스탬프",
-      books: "책", boardGames: "보드게임", pets: "반려동물 동반", kids: "아이 동반 환영",
-    },
-    criteriaShort: {
-      openNow: "영업 중", openTomorrow: "내일 영업", workFriendly: "작업", localRoast: "로스팅", sellsBeans: "원두",
-      outdoor: "야외", dessert: "디저트", brunch: "브런치", view: "전망", openEarly: "이른 오픈",
-      openSunday: "일요일", arcDiscount: "도민 할인", loyalty: "적립", books: "책",
-      boardGames: "보드게임", pets: "반려동물", kids: "아이",
     },
   },
 };

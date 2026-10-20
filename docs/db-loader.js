@@ -137,18 +137,7 @@
           cafe.hasHours = true;
         });
 
-      var translations = {};
-      rows(database, "SELECT cafe_id, locale, name, blurb, hours_note FROM cafe_translations")
-        .forEach(function (row) {
-          if (!byId[row.cafe_id]) return;
-          if (!translations[row.cafe_id]) translations[row.cafe_id] = {};
-          translations[row.cafe_id][row.locale] = {
-            name: row.name,
-            blurb: row.blurb,
-            hoursNote: row.hours_note || "",
-          };
-        });
-      return { cafes: cafes, translations: translations };
+      return { cafes: cafes };
     } finally {
       database.close();
     }

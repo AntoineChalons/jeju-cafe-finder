@@ -27,25 +27,25 @@ function runtime(fetch = async () => ({ ok: true, json: async () => config })) {
   return sandbox;
 }
 
-test("fixed venue symbols and default colours follow the requested mapping", () => {
+test("fixed venue symbols use configured colours and dimensions", () => {
   const sandbox = runtime();
   sandbox.window.configureMapPins(config);
   const expected = {
-    bakery: ["#B96745", "croissant.svg"],
-    roastery: ["#3C3C3C", "coffee-bean.svg"],
-    cafe: ["#55296E", "coffee-cup.svg"],
-    pub: ["#C2A13A", "beer-mug.svg"],
+    bakery: "croissant.svg",
+    roastery: "coffee-bean.svg",
+    cafe: "coffee-cup.svg",
+    pub: "beer-mug.svg",
   };
   assert.deepEqual(Array.from(sandbox.window.MAP_PIN_KINDS), Object.keys(expected));
-  for (const [kind, [color, file]] of Object.entries(expected)) {
+  for (const [kind, file] of Object.entries(expected)) {
     const symbol = sandbox.window.createMapPinSymbol(kind);
     assert.equal(symbol.className, "map-pin-symbol");
     assert.equal(symbol.attributes["data-pin-kind"], kind);
     assert.equal(symbol.attributes["aria-hidden"], "true");
     assert.equal(symbol.children[0].className, "map-pin-glyph");
-    assert.equal(symbol.style.values["--pin-color"], color);
-    assert.equal(symbol.style.values["--pin-width"], "28px");
-    assert.equal(symbol.style.values["--pin-height"], "28px");
+    assert.equal(symbol.style.values["--pin-color"], config[kind].color);
+    assert.equal(symbol.style.values["--pin-width"], config[kind].width + "px");
+    assert.equal(symbol.style.values["--pin-height"], config[kind].height + "px");
     assert.equal(symbol.style.values["--pin-icon"], `url("icons/map-pins/${file}")`);
     assert.match(fs.readFileSync(path.join(docs, "icons/map-pins", file), "utf8"), /<svg/);
   }
@@ -67,7 +67,7 @@ test("JSON controls independent pixel dimensions per kind and popup offset", () 
   assert.equal(pub.style.values["--pin-width"], "24px");
   assert.equal(pub.style.values["--pin-height"], "48px");
   assert.equal(sandbox.window.mapPinPopupOffset("pub"), 26);
-  assert.equal(sandbox.window.createMapPinSymbol("cafe").style.values["--pin-width"], "28px");
+  assert.equal(sandbox.window.createMapPinSymbol("cafe").style.values["--pin-width"], config.cafe.width + "px");
   edited.bakery.width = 99;
   assert.equal(sandbox.window.createMapPinSymbol("bakery").style.values["--pin-width"], "40px");
 });
@@ -133,18 +133,16 @@ test("config load revalidates JSON on every page load and rejects HTTP errors", 
   await assert.rejects(broken.window.loadMapPins(), /map-pins-config.json: HTTP 404/);
 });
 
-test("legend precedes map and shares the marker symbol factory and translated type labels", () => {
+test("legend precedes map and shares the marker symbol factory and English type labels", () => {
   assert.ok(html.indexOf('id="mapLegend"') < html.indexOf('id="map"'));
   assert.match(app.slice(app.indexOf("  function renderMapLegend()"), app.indexOf("  function mapPinTitle")), /createMapPinSymbol\(kind\)/);
   assert.match(app.slice(app.indexOf("  function createMarkers()"), app.indexOf("  function updateMapMarkers")), /createMapPinSymbol\(cafe.kind\)/);
-  assert.ok((app.match(/renderMapLegend\(\);/g) || []).length >= 2);
+  assert.match(app, /renderMapLegend\(\);/);
   const translations = {};
   vm.createContext(translations);
   vm.runInContext(fs.readFileSync(path.join(docs, "i18n.js"), "utf8"), translations);
-  for (const locale of ["en", "ko"]) {
-    assert.ok(translations.APP_TRANSLATIONS[locale].map.legend);
-    for (const kind of Object.keys(config)) {
-      assert.ok(translations.APP_TRANSLATIONS[locale].map.pinTypes[kind]);
-    }
+  assert.ok(translations.APP_TRANSLATIONS.en.map.legend);
+  for (const kind of Object.keys(config)) {
+    assert.ok(translations.APP_TRANSLATIONS.en.map.pinTypes[kind]);
   }
 });

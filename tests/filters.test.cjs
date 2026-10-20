@@ -28,17 +28,15 @@ function cafe(hours = {}, hasHours = Object.keys(hours).length > 0) {
   return { hours, hasHours };
 }
 
-test("venue kinds have the requested fixed values and translated labels", () => {
+test("venue kinds have the requested fixed values and English labels", () => {
   assert.deepEqual(Array.from(sandbox.KINDS), ["cafe", "roastery", "bakery", "pub"]);
   assert.deepEqual(
     ["All", ...sandbox.KINDS].map((kind) => sandbox.APP_TRANSLATIONS.en.kinds[kind]),
     ["All", "Cafes", "Roasters", "Bakers", "Pub"]
   );
-  for (const kind of ["All", ...sandbox.KINDS]) {
-    assert.ok(sandbox.APP_TRANSLATIONS.ko.kinds[kind]);
-  }
   const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
-  assert.ok(html.indexOf('id="kindList"') < html.indexOf('id="criteriaList"'));
+  assert.match(html, /<div class="map-legend-banner"[\s\S]*?id="kindList"[\s\S]*?<\/div>/);
+  assert.ok(html.indexOf('id="kindList"') < html.indexOf('id="map"'));
   assert.doesNotMatch(html, /id="regionList"/);
   assert.doesNotMatch(app, /state\.region|renderRegions/);
 });
@@ -120,19 +118,16 @@ test("filter markup opts out of automatic translation and escapes literal text",
   assert.match(html, /id="criteriaList" translate="no"/);
 });
 
-test("filter order, removals, and English/Korean labels", () => {
-  assert.deepEqual(Array.from(sandbox.CRITERIA, (entry) => entry.key), [
-    "openNow", "openTomorrow", "workFriendly", "outdoor", "dessert",
-    "brunch", "view", "openEarly", "books", "boardGames", "pets", "kids", "loyalty",
-  ]);
+test("filter order, removals, and English labels", () => {
+  assert.deepEqual(Array.from(sandbox.CRITERIA, (entry) => entry.key),
+    filterConfig.filter((entry) => entry.enabled).sort((a, b) => a.index - b.index)
+      .map((entry) => entry.name));
   assert.equal(sandbox.APP_TRANSLATIONS.en.criteria.view, "Beautiful view");
   assert.equal(sandbox.APP_TRANSLATIONS.en.criteria.openEarly, "Opens early");
   assert.equal(sandbox.APP_TRANSLATIONS.en.criteria.openTomorrow, "Open tomorrow");
-  for (const locale of ["en", "ko"]) {
-    for (const criterion of sandbox.CRITERIA) {
-      assert.ok(sandbox.APP_TRANSLATIONS[locale].criteria[criterion.key]);
-      assert.ok(sandbox.APP_TRANSLATIONS[locale].criteriaShort[criterion.key]);
-    }
+  for (const criterion of sandbox.CRITERIA) {
+    assert.ok(sandbox.APP_TRANSLATIONS.en.criteria[criterion.key]);
+    assert.ok(sandbox.APP_TRANSLATIONS.en.criteriaShort[criterion.key]);
   }
 });
 
