@@ -43,6 +43,24 @@ The browser downloads a generated SQLite database and queries it with sql.js.
 The app is a static GitHub Pages site with no application server. Counts shown
 in the interface come from the loaded database.
 
+## Personal data
+
+Personal settings stay in this browser, in one versioned JSON document under
+the `localStorage` key `jcf:prefs` (schema 1). There is no account, backend or
+upload of personal data. Location coordinates are never stored in this document.
+Clearing site data removes these settings, and browser storage is not a backup.
+
+`window.UserPrefs` provides storage for filter preferences, ratings, tags, the
+rating filter and the around-me mode/radius. This is the storage foundation;
+the feature controls and JSON export/import will arrive in the follow-up
+personalization issues. Export is not available in this release.
+
+If storage is blocked or a write fails, the app keeps working in memory and
+shows a dismissible notice. Corrupt saved data is copied unchanged to a
+`jcf:prefs:corrupt-*` key before starting fresh; if that copy fails, the original
+is left untouched. A document from a newer schema is never overwritten, and a
+notice asks you to reload. Changes synchronize between open tabs.
+
 ## Display configuration
 
 ### Must-have filters
@@ -205,6 +223,8 @@ docs/
 ├── db-loader.js    # Downloads and queries cafes.db with sql.js
 ├── i18n.js         # English UI strings (en)
 ├── index.html      # Page markup and third-party scripts
+├── user-prefs.js   # Browser-only personal settings, validation and merge helpers
+├── prefs-notice.css # Non-blocking storage notices using light/dark design tokens
 ├── style.css       # Design tokens and responsive styling
 └── vendor/sql.js/  # Pinned sql.js runtime and license
 tools/
