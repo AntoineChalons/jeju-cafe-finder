@@ -22,8 +22,8 @@
       }
       return Object.assign({}, definition, entry);
     });
-    CRITERIA = configured.filter(function (entry) { return entry.enabled; })
-      .sort(function (a, b) { return a.index - b.index; });
+    CONFIGURED_CRITERIA = configured.sort(function (a, b) { return a.index - b.index; });
+    CRITERIA = CONFIGURED_CRITERIA.filter(function (entry) { return entry.enabled; });
     return CRITERIA;
   };
 

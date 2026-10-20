@@ -514,6 +514,32 @@
     });
   }
 
+  // Config has already been validated. Saved preferences are untrusted and
+  // may mention filters no longer in config; ignore those names, don't erase them.
+  function applyFilterPrefs(configured, prefs) {
+    if (!Array.isArray(configured)) return [];
+    prefs = isObject(prefs) ? prefs : {};
+    var order = cleanNameList(prefs.order) || [];
+    var hidden = cleanNameList(prefs.hidden) || [];
+    var shown = cleanNameList(prefs.shown) || [];
+    var seen = Object.create(null);
+    return configured.filter(function (entry) {
+      if (!isObject(entry) || typeof entry.key !== "string" || seen[entry.key]) return false;
+      seen[entry.key] = true;
+      return shown.indexOf(entry.key) !== -1 ||
+        (entry.enabled === true && hidden.indexOf(entry.key) === -1);
+    }).sort(function (a, b) {
+      var aOrder = order.indexOf(a.key);
+      var bOrder = order.indexOf(b.key);
+      if (aOrder !== -1 || bOrder !== -1) {
+        if (aOrder === -1) return 1;
+        if (bOrder === -1) return -1;
+        return aOrder - bOrder;
+      }
+      return a.index - b.index;
+    });
+  }
+
   function getFilterPrefs() {
     var f = ensureDoc().filters;
     return { order: f.order.slice(), hidden: f.hidden.slice(), shown: f.shown.slice(), defaultOn: f.defaultOn.slice() };
@@ -597,6 +623,7 @@
     setTags: setTags,
     allTags: allTags,
     getFilterPrefs: getFilterPrefs,
+    applyFilterPrefs: applyFilterPrefs,
     setFilterPrefs: setFilterPrefs,
     getRatingFilter: getRatingFilter,
     setRatingFilter: setRatingFilter,

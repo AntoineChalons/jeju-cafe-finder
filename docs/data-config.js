@@ -46,4 +46,5 @@ var CRITERION_DEFINITIONS = [
 ];
 
 // Populated by filters-config.js before app.js starts.
+var CONFIGURED_CRITERIA = [];
 var CRITERIA = [];

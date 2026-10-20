@@ -193,6 +193,55 @@ a, button, input, [role="button"] {
 }
 .link-btn:hover { text-decoration-color: currentColor; }
 
+.filter-actions { display: flex; gap: 0.65rem; align-items: center; }
+.filter-actions .link-btn { min-height: 44px; }
+.personalize-trigger { display: grid; place-items: center; width: 44px; }
+.personalize-trigger svg { width: 18px; height: 18px; }
+
+/* Native dialog supplies Escape handling and background inertness. */
+.personalize-dialog {
+  width: min(44rem, calc(100vw - 3rem));
+  max-height: calc(100dvh - 3rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+.personalize-dialog[open] { display: flex; flex-direction: column; }
+.personalize-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.personalize-heading { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+.personalize-heading h2 { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 0.4rem; }
+.personalize-heading p { font-size: var(--text-sm); color: var(--color-text-muted); }
+.personalize-section-title { padding: 0.75rem 1.5rem 0; font-size: var(--text-base); flex-shrink: 0; }
+.personalize-list { padding: 0 1.5rem; margin: 0; list-style: none; overflow-y: auto; min-height: 0; }
+.personalize-row { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--color-border); }
+.personalize-name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.personalize-options { display: flex; flex-wrap: wrap; gap: 0 1rem; grid-column: 1; }
+.personalize-options label { display: flex; gap: 0.4rem; align-items: center; min-height: 44px; font-size: var(--text-sm); cursor: pointer; }
+.personalize-options input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+.personalize-options label:has(input:disabled) { color: var(--color-text-faint); cursor: default; }
+.personalize-moves { display: flex; align-items: center; grid-column: 2; grid-row: 1 / 3; gap: 0.2rem; }
+.personalize-moves button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.personalize-moves svg { width: 18px; height: 18px; }
+.personalize-moves button:disabled { opacity: 0.35; cursor: default; }
+.personalize-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); flex-shrink: 0; }
+.personalize-footer > .link-btn { margin-right: auto; min-height: 44px; }
+.personalize-button { min-height: 44px; padding: 0.5rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 600; }
+.personalize-save { color: var(--color-on-primary); background: var(--color-primary); border-color: var(--color-primary); }
+.personalize-dialog :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+@media (max-width: 639px) {
+  .personalize-dialog { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; }
+  .personalize-heading { padding: 1rem; }
+  .personalize-section-title { padding: 0.75rem 1rem 0; }
+  .personalize-list { padding: 0 1rem; flex: 1; }
+  .personalize-row { gap: 0.3rem 0.5rem; }
+  .personalize-moves { flex-direction: column; }
+  .personalize-footer { padding: 0.75rem 1rem; }
+}
+
 .radio-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .radio-chip {
   position: relative;

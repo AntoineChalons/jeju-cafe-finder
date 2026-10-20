@@ -644,3 +644,96 @@ test("a newer-schema warning takes priority over an earlier write failure", () =
   assert.equal(prefs.flush(), false);
   assert.equal(storage.getItem("jcf:prefs"), raw);
 });
+
+const configuredFilters = [
+  { key: "openNow", enabled: true, index: 0 },
+  { key: "workFriendly", enabled: true, index: 1 },
+  { key: "pets", enabled: true, index: 2 },
+  { key: "boardGames", enabled: false, index: 3 },
+];
+
+test("applyFilterPrefs starts with enabled config entries in index order", () => {
+  const { prefs } = setup(memoryStorage());
+  const configured = configuredFilters.slice().reverse();
+  assert.deepEqual(plain(prefs.applyFilterPrefs(configured, {})).map((entry) => entry.key),
+    ["openNow", "workFriendly", "pets"]);
+});
+
+test("applyFilterPrefs handles hidden and explicitly shown disabled filters", () => {
+  const { prefs } = setup(memoryStorage());
+  assert.deepEqual(plain(prefs.applyFilterPrefs(configuredFilters, {
+    hidden: ["pets"], shown: ["boardGames"],
+  })).map((entry) => entry.key), ["openNow", "workFriendly", "boardGames"]);
+  assert.deepEqual(plain(prefs.applyFilterPrefs(configuredFilters, {
+    hidden: ["boardGames"], shown: ["boardGames"],
+  })).map((entry) => entry.key), ["openNow", "workFriendly", "pets", "boardGames"]);
+});
+
+test("applyFilterPrefs applies saved order first and appends new filters in config order", () => {
+  const { prefs } = setup(memoryStorage());
+  const configured = configuredFilters.concat([
+    { key: "newFirst", enabled: true, index: 4 },
+    { key: "newSecond", enabled: true, index: 5 },
+  ]).reverse();
+  assert.deepEqual(plain(prefs.applyFilterPrefs(configured, {
+    order: ["removedFilter", "workFriendly", "workFriendly", "openNow"],
+  })).map((entry) => entry.key), ["workFriendly", "openNow", "pets", "newFirst", "newSecond"]);
+});
+
+test("applyFilterPrefs never mutates the configured array, entries or saved preferences", () => {
+  const { prefs } = setup(memoryStorage());
+  const configured = Object.freeze(configuredFilters.map((entry) => Object.freeze({ ...entry })));
+  const settings = Object.freeze({
+    order: Object.freeze(["boardGames", "removedFilter"]),
+    hidden: Object.freeze(["openNow"]),
+    shown: Object.freeze(["boardGames", "removedFilter"]),
+    defaultOn: Object.freeze(["workFriendly"]),
+  });
+  const before = JSON.stringify({ configured, settings });
+  prefs.applyFilterPrefs(configured, settings);
+  assert.equal(JSON.stringify({ configured, settings }), before);
+});
+
+test("applyFilterPrefs ignores bad preferences and unknown names without blocking", () => {
+  const { prefs } = setup(memoryStorage());
+  for (const settings of [undefined, null, 42, false, "", [], {
+    order: "openNow", hidden: {}, shown: null,
+  }, {
+    order: ["bad-key", 42, null, "removedFilter"], hidden: ["unknown"], shown: ["unknown"],
+  }]) {
+    assert.deepEqual(plain(prefs.applyFilterPrefs(configuredFilters, settings)).map((entry) => entry.key),
+      ["openNow", "workFriendly", "pets"]);
+  }
+  for (const configured of [undefined, null, {}, 42]) {
+    assert.deepEqual(plain(prefs.applyFilterPrefs(configured, {})), []);
+  }
+});
+
+test("applyFilterPrefs supports all hidden and stable equal-index order", () => {
+  const { prefs } = setup(memoryStorage());
+  assert.deepEqual(plain(prefs.applyFilterPrefs(configuredFilters, {
+    hidden: ["openNow", "workFriendly", "pets"],
+  })), []);
+  const tied = configuredFilters.slice(0, 3).map((entry) => ({ ...entry, index: 0 }));
+  assert.deepEqual(plain(prefs.applyFilterPrefs(tied, {})).map((entry) => entry.key),
+    ["openNow", "workFriendly", "pets"]);
+});
+
+test("removed filter preferences survive persistence and apply when config reintroduces them", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  prefs.setFilterPrefs({
+    order: ["goneFilter", "workFriendly"], hidden: ["goneHidden"],
+    shown: ["goneFilter"], defaultOn: ["goneFilter"],
+  });
+  const before = plain(prefs.getFilterPrefs());
+  prefs.applyFilterPrefs(configuredFilters, before);
+  prefs.flush();
+  const reloaded = setup(storage);
+  reloaded.prefs.load();
+  assert.deepEqual(plain(reloaded.prefs.getFilterPrefs()), before);
+  assert.equal(reloaded.prefs.applyFilterPrefs(configuredFilters.concat([
+    { key: "goneFilter", enabled: false, index: 5 },
+  ]), before)[0].key, "goneFilter");
+});

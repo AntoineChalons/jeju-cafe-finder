@@ -230,7 +230,7 @@
   }
 
   var COMPUTED_KEYS = {};
-  CRITERIA.forEach(function (criterion) {
+  CRITERION_DEFINITIONS.forEach(function (criterion) {
     if (criterion.computed) COMPUTED_KEYS[criterion.key] = true;
   });
 
@@ -282,6 +282,8 @@
   document.addEventListener("click", function (event) {
     if (
       sidebar.classList.contains("open") &&
+      !(personalizeDialog && personalizeDialog.open) &&
+      !(event.target.closest && event.target.closest("#personalizeDialog")) &&
       !sidebar.contains(event.target) &&
       !sidebarToggle.contains(event.target)
     ) {
@@ -299,16 +301,29 @@
     prices: {},
     sort: { key: "name", dir: "asc" },
   };
+  var filterPrefs = window.UserPrefs ? window.UserPrefs.getFilterPrefs() : {
+    order: [], hidden: [], shown: [], defaultOn: [],
+  };
+  var filterPrefsSignature = JSON.stringify(filterPrefs);
+  if (window.UserPrefs) CRITERIA = window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, filterPrefs);
 
   function clearFilters() {
     state.kind = "All";
+    state.criteria = {};
     CRITERIA.forEach(function (criterion) {
       state.criteria[criterion.key] = false;
     });
     SIZES.forEach(function (size) { state.sizes[size] = false; });
     PRICES.forEach(function (price) { state.prices[price] = false; });
   }
-  clearFilters();
+
+  function applyDefaultFilters() {
+    clearFilters();
+    filterPrefs.defaultOn.forEach(function (key) {
+      if (Object.prototype.hasOwnProperty.call(state.criteria, key)) state.criteria[key] = true;
+    });
+  }
+  applyDefaultFilters();
 
   function selectedCriteriaKeys() {
     return CRITERIA.filter(function (criterion) {
@@ -428,13 +443,171 @@
     }, "toggle-price-");
   }
 
+  document.getElementById("resetBtn").title = message("filters.resetHint");
   document.getElementById("resetBtn").addEventListener("click", resetFilters);
-  document.getElementById("mapEmptyReset").addEventListener("click", resetFilters);
-
-  function resetFilters() {
+  document.getElementById("mapEmptyReset").addEventListener("click", function () {
     clearFilters();
     renderControls();
     update();
+  });
+
+  function resetFilters() {
+    applyDefaultFilters();
+    renderControls();
+    update();
+  }
+
+  /* ---------------------------------------------------------
+   * Personal filter settings (draft until Save)
+   * --------------------------------------------------------- */
+  var personalizeBtn = document.getElementById("personalizeBtn");
+  var personalizeDialog = document.getElementById("personalizeDialog");
+  var personalizeList = document.getElementById("personalizeList");
+  var personalizeStatus = document.getElementById("personalizeStatus");
+  var filterDraft = [];
+  var restoringFilterDefaults = false;
+
+  function makeFilterDraft(prefs) {
+    var visible = window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, prefs).map(function (entry) { return entry.key; });
+    // Include every configured row while retaining the visitor's chosen order.
+    return window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, {
+      order: prefs.order, shown: CONFIGURED_CRITERIA.map(function (entry) { return entry.key; }),
+    }).map(function (entry) {
+      return { criterion: entry, shown: visible.indexOf(entry.key) !== -1, defaultOn: prefs.defaultOn.indexOf(entry.key) !== -1 };
+    });
+  }
+
+  function renderFilterDraft() {
+    personalizeList.innerHTML = "";
+    filterDraft.forEach(function (row, index) {
+      var criterion = row.criterion;
+      var item = document.createElement("li");
+      item.className = "personalize-row";
+      item.setAttribute("data-filter-key", criterion.key);
+      item.innerHTML =
+        '<span class="personalize-name notranslate" translate="no">' + escapeHtml(criterionLabel(criterion)) + "</span>" +
+        '<div class="personalize-options">' +
+          '<label><input type="checkbox" data-action="show" aria-label="' + escapeHtml(message("personalize.showFilter", { name: criterionLabel(criterion) })) + '"' + (row.shown ? " checked" : "") + '><span>' + escapeHtml(message("personalize.show")) + "</span></label>" +
+          '<label><input type="checkbox" data-action="default" aria-label="' + escapeHtml(message("personalize.defaultFor", { name: criterionLabel(criterion) })) + '"' + (row.defaultOn ? " checked" : "") + (row.shown ? "" : " disabled") + '><span>' + escapeHtml(message("personalize.defaultOn")) + "</span></label>" +
+        "</div>" +
+        '<div class="personalize-moves">' +
+          '<button type="button" data-action="up" aria-label="' + escapeHtml(message("personalize.moveUp", { name: criterionLabel(criterion) })) + '"' + (index === 0 ? " disabled" : "") + '><i data-lucide="arrow-up" aria-hidden="true"></i><span class="sr-only">' + escapeHtml(message("personalize.up")) + "</span></button>" +
+          '<button type="button" data-action="down" aria-label="' + escapeHtml(message("personalize.moveDown", { name: criterionLabel(criterion) })) + '"' + (index === filterDraft.length - 1 ? " disabled" : "") + '><i data-lucide="arrow-down" aria-hidden="true"></i><span class="sr-only">' + escapeHtml(message("personalize.down")) + "</span></button>" +
+        "</div>";
+      item.querySelector('[data-action="show"]').addEventListener("change", function (event) {
+        row.shown = event.target.checked;
+        item.querySelector('[data-action="default"]').disabled = !row.shown;
+      });
+      item.querySelector('[data-action="default"]').addEventListener("change", function (event) {
+        row.defaultOn = event.target.checked;
+      });
+      ["up", "down"].forEach(function (direction) {
+        item.querySelector('[data-action="' + direction + '"]').addEventListener("click", function () {
+          var destination = index + (direction === "up" ? -1 : 1);
+          if (destination < 0 || destination >= filterDraft.length) return;
+          filterDraft.splice(index, 1);
+          filterDraft.splice(destination, 0, row);
+          renderFilterDraft();
+          var moved = personalizeList.children[destination];
+          var target = moved.querySelector('[data-action="' + direction + '"]');
+          (target.disabled ? moved.querySelector('[data-action="show"]') : target).focus();
+          personalizeStatus.textContent = message("personalize.moved", {
+            name: criterionLabel(criterion), position: destination + 1, count: filterDraft.length,
+          });
+        });
+      });
+      personalizeList.appendChild(item);
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  personalizeBtn.disabled = !window.UserPrefs;
+  personalizeBtn.addEventListener("click", function () {
+    filterDraft = makeFilterDraft(window.UserPrefs.getFilterPrefs());
+    restoringFilterDefaults = false;
+    personalizeStatus.textContent = "";
+    renderFilterDraft();
+    personalizeDialog.showModal();
+  });
+  personalizeDialog.addEventListener("close", function () {
+    filterDraft = [];
+    personalizeBtn.focus();
+  });
+  personalizeDialog.addEventListener("keydown", function (event) {
+    if (event.key !== "Tab") return;
+    var controls = personalizeDialog.querySelectorAll("button:not(:disabled), input:not(:disabled)");
+    var first = controls[0];
+    var last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  personalizeDialog.addEventListener("click", function (event) {
+    // A click outside the dialog's rectangle is a backdrop click.
+    var rect = personalizeDialog.getBoundingClientRect();
+    if (event.target === personalizeDialog &&
+        (event.clientX < rect.left || event.clientX > rect.right ||
+         event.clientY < rect.top || event.clientY > rect.bottom)) personalizeDialog.close();
+  });
+  document.getElementById("personalizeCancel").addEventListener("click", function () {
+    personalizeDialog.close();
+  });
+  document.getElementById("personalizeRestore").addEventListener("click", function () {
+    filterDraft = makeFilterDraft({ order: [], hidden: [], shown: [], defaultOn: [] });
+    restoringFilterDefaults = true;
+    renderFilterDraft();
+    personalizeStatus.textContent = message("personalize.restored");
+  });
+  function draftFilterPrefs(previous) {
+    var configuredKeys = CONFIGURED_CRITERIA.map(function (entry) { return entry.key; });
+    var order = filterDraft.map(function (row) { return row.criterion.key; });
+    function keepRemoved(list) {
+      return restoringFilterDefaults ? [] : list.filter(function (key) { return configuredKeys.indexOf(key) === -1; });
+    }
+    if (!restoringFilterDefaults) {
+      previous.order.forEach(function (key, index) {
+        if (configuredKeys.indexOf(key) === -1) order.splice(Math.min(index, order.length), 0, key);
+      });
+    }
+    return {
+      order: JSON.stringify(order) === JSON.stringify(configuredKeys) ? [] : order,
+      hidden: filterDraft.filter(function (row) { return !row.shown && row.criterion.enabled; })
+        .map(function (row) { return row.criterion.key; }).concat(keepRemoved(previous.hidden)),
+      shown: filterDraft.filter(function (row) { return row.shown && !row.criterion.enabled; })
+        .map(function (row) { return row.criterion.key; }).concat(keepRemoved(previous.shown)),
+      defaultOn: filterDraft.filter(function (row) { return row.defaultOn; })
+        .map(function (row) { return row.criterion.key; }).concat(keepRemoved(previous.defaultOn)),
+    };
+  }
+  document.getElementById("personalizeSave").addEventListener("click", function () {
+    window.UserPrefs.setFilterPrefs(draftFilterPrefs(window.UserPrefs.getFilterPrefs()));
+    personalizeDialog.close();
+  });
+
+  function refreshPersonalFilters() {
+    var next = window.UserPrefs.getFilterPrefs();
+    var signature = JSON.stringify(next);
+    if (signature === filterPrefsSignature) return;
+    filterPrefs = next;
+    filterPrefsSignature = signature;
+    CRITERIA = window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, filterPrefs);
+    var visible = allCriteriaKeys();
+    Object.keys(state.criteria).forEach(function (key) {
+      if (visible.indexOf(key) === -1) delete state.criteria[key];
+    });
+    visible.forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(state.criteria, key)) state.criteria[key] = false;
+    });
+    if (!tableColumns().some(function (column) { return column.key === state.sort.key; })) {
+      state.sort = { key: "name", dir: "asc" };
+    }
+    renderControls();
+    renderTableHeader();
+    update({ fit: false });
   }
 
   /* ---------------------------------------------------------
@@ -1125,4 +1298,5 @@
   renderMapLegend();
   renderTableHeader();
   update();
+  if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalFilters);
 })();

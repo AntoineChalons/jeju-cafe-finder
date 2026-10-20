@@ -12,9 +12,9 @@ Users can:
 
 - Filter by venue type: All, Cafes, Roasters, Bakers or Pub. Region labels
   remain available in the comparison table and map popups.
-- Require any of 13 criteria: open now, open tomorrow, work friendly, outdoor
-  seating, desserts, brunch, beautiful view, opens early, books, board games,
-  pet friendly, kids friendly and loyalty reward.
+- Choose visible criteria, their order and default selections through
+  Personalize beside Reset. All filters listed in `filters-config.json` are
+  available there, including those hidden by default.
 - Narrow by size (tiny ≤ 10 seats, medium 11–20, large > 20) and price range
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
@@ -50,10 +50,18 @@ the `localStorage` key `jcf:prefs` (schema 1). There is no account, backend or
 upload of personal data. Location coordinates are never stored in this document.
 Clearing site data removes these settings, and browser storage is not a backup.
 
-`window.UserPrefs` provides storage for filter preferences, ratings, tags, the
-rating filter and the around-me mode/radius. This is the storage foundation;
-the feature controls and JSON export/import will arrive in the follow-up
-personalization issues. Export is not available in this release.
+Personalize lets visitors show, hide and reorder configured must-have filters
+and choose which start switched on. Save applies the draft; Cancel, Escape
+and clicking the desktop backdrop discard it. Restore defaults stages a reset
+of just these filter settings until Save is pressed; ratings and tags are
+untouched. Reset and page loads apply the saved default-on selections.
+Clear filters on the empty-map overlay clears all active criteria instead
+of reapplying defaults.
+
+`window.UserPrefs` also provides storage for ratings, tags, the rating filter
+and the around-me mode/radius. Their feature controls and JSON export/import
+will arrive in the follow-up personalization issues. Export is not available
+in this release.
 
 If storage is blocked or a write fails, the app keeps working in memory and
 shows a dismissible notice. Corrupt saved data is copied unchanged to a
@@ -66,15 +74,16 @@ notice asks you to reload. Changes synchronize between open tabs.
 ### Must-have filters
 
 Edit **`docs/filters-config.json`** to configure the "Must have" list. No
-JavaScript changes are needed to rename, hide, enable or reorder existing filters:
+JavaScript changes are needed to rename filters or change their defaults:
 
 ```json
 { "name": "openNow", "enabled": true, "displayedText": "Open now", "index": 0 }
 ```
 
 - `name`: stable internal filter identifier. Do not rename it.
-- `enabled`: `true` shows the filter; `false` removes it from the frontend,
-  including its comparison column and recommendation criteria.
+- `enabled`: visible by default. Visitors can show a disabled filter or hide
+  an enabled one through Personalize. Remove the entry to make a filter
+  unavailable to everyone.
 - `displayedText`: exact text shown in the filter list, comparison-column
   headings/tooltips, map-popup tags and recommendation tags. It never goes
   through the UI string dictionary.
@@ -85,9 +94,10 @@ JavaScript changes are needed to rename, hide, enable or reorder existing filter
   consecutive indexes for a predictable order; gaps are allowed and ties
   preserve file order.
 
-The initial configuration keeps the current 13 filters enabled and includes
-`localRoast`, `sellsBeans`, `openSunday` and `arcDiscount` as disabled entries.
-Omitted filters are also hidden. Commit edits to `main`; GitHub Pages picks
+The initial configuration has ten filters enabled and seven hidden by default.
+New filters follow saved entries in config order. Saved settings for removed
+filters are ignored, not deleted, so they can apply if the filter returns.
+Commit edits to `main`; GitHub Pages picks
 them up through its normal deployment. The browser reloads the JSON on page
 load, so refresh an already-open tab after deployment.
 

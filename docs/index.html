@@ -16,11 +16,11 @@
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
-<script src="vendor/sql.js/sql-wasm.js?v=20261020-user-prefs"></script>
+<script src="vendor/sql.js/sql-wasm.js?v=20261020-personalize"></script>
 
-<link rel="stylesheet" href="style.css?v=20261020-user-prefs" />
-<link rel="stylesheet" href="map-type-bar.css?v=20261020-user-prefs" />
-<link rel="stylesheet" href="prefs-notice.css?v=20261020-user-prefs" />
+<link rel="stylesheet" href="style.css?v=20261020-personalize" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261020-personalize" />
+<link rel="stylesheet" href="prefs-notice.css?v=20261020-personalize" />
 </head>
 <body>
 
@@ -45,7 +45,10 @@
       <section class="filter-group">
         <div class="filter-title-row">
           <h2 class="filter-title" data-i18n="filters.mustHave">Must have</h2>
-          <button type="button" class="link-btn" id="resetBtn" data-testid="button-reset-filters" data-i18n="filters.reset">Reset</button>
+          <div class="filter-actions">
+            <button type="button" class="link-btn personalize-trigger" id="personalizeBtn" data-testid="button-personalize" aria-label="Personalize" data-i18n-aria-label="personalize.open" title="Personalize" aria-haspopup="dialog" aria-controls="personalizeDialog"><i data-lucide="settings-2" aria-hidden="true"></i></button>
+            <button type="button" class="link-btn" id="resetBtn" data-testid="button-reset-filters" data-i18n="filters.reset">Reset</button>
+          </div>
         </div>
         <div class="checkbox-list notranslate" id="criteriaList" translate="no"></div>
       </section>
@@ -125,13 +128,28 @@
   </main>
 </div>
 
+<dialog id="personalizeDialog" class="personalize-dialog" aria-labelledby="personalizeTitle" aria-describedby="personalizeDescription">
+  <div class="personalize-heading">
+    <h2 id="personalizeTitle" data-i18n="personalize.title">Personalize</h2>
+    <p id="personalizeDescription" data-i18n="personalize.description">Choose which filters to show, their order, and which start switched on. Changes stay in this browser.</p>
+  </div>
+  <h3 id="personalizeFiltersHeading" class="personalize-section-title" data-i18n="personalize.filters">Filters</h3>
+  <ol id="personalizeList" class="personalize-list" aria-labelledby="personalizeFiltersHeading"></ol>
+  <p id="personalizeStatus" class="sr-only" role="status"></p>
+  <div class="personalize-footer">
+    <button type="button" class="link-btn" id="personalizeRestore" data-i18n="personalize.restore">Restore defaults</button>
+    <button type="button" class="personalize-button" id="personalizeCancel" data-i18n="personalize.cancel">Cancel</button>
+    <button type="button" class="personalize-button personalize-save" id="personalizeSave" data-i18n="personalize.save">Save</button>
+  </div>
+</dialog>
+
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261020-user-prefs"></script>
-<script src="data-config.js?v=20261020-user-prefs"></script>
-<script src="filters-config.js?v=20261020-user-prefs"></script>
-<script src="map-pins.js?v=20261020-user-prefs"></script>
-<script src="db-loader.js?v=20261020-user-prefs"></script>
-<script src="user-prefs.js?v=20261020-user-prefs"></script>
-<script src="bootstrap.js?v=20261020-user-prefs"></script>
+<script src="i18n.js?v=20261020-personalize"></script>
+<script src="data-config.js?v=20261020-personalize"></script>
+<script src="filters-config.js?v=20261020-personalize"></script>
+<script src="map-pins.js?v=20261020-personalize"></script>
+<script src="db-loader.js?v=20261020-personalize"></script>
+<script src="user-prefs.js?v=20261020-personalize"></script>
+<script src="bootstrap.js?v=20261020-personalize"></script>
 </body>
 </html>
