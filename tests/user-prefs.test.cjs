@@ -407,3 +407,240 @@ test("a storage event merges with a pending local write instead of discarding it
 test("the module makes no network request and uses only localStorage", () => {
   assert.doesNotMatch(source, /fetch\(|XMLHttpRequest|sendBeacon|WebSocket|geolocation|sessionStorage|document\.cookie/);
 });
+
+test("Object prototype names are valid tag text and are counted safely", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  const tags = ["constructor", "prototype", "__proto__", "toString", "hasOwnProperty"];
+  prefs.setTags("a-cafe", tags);
+  prefs.setTags("b-cafe", ["CONSTRUCTOR", "__proto__"]);
+  assert.deepEqual(plain(prefs.getTags("a-cafe")), tags);
+  assert.deepEqual(plain(prefs.allTags()).slice(0, 2), [
+    { tag: "__proto__", count: 2 }, { tag: "constructor", count: 2 },
+  ]);
+  prefs.flush();
+  const reloaded = setup(storage);
+  reloaded.prefs.load();
+  assert.deepEqual(plain(reloaded.prefs.getTags("a-cafe")), tags);
+});
+
+test("pagehide writes only when a local save is pending", () => {
+  const storage = memoryStorage();
+  const { prefs, events, persistCalls } = setup(storage);
+  prefs.load();
+  events.pagehide();
+  assert.equal(storage.getItem("jcf:prefs"), null);
+  assert.equal(persistCalls.length, 0);
+  prefs.setRating("a-cafe", 4);
+  events.pagehide();
+  assert.equal(stored(storage).ratings["a-cafe"].stars, 4);
+  assert.equal(persistCalls.length, 1);
+});
+
+test("a newer schema from another tab cancels pending writes and becomes read-only", () => {
+  const storage = memoryStorage();
+  const { prefs, sandbox, events } = setup(storage);
+  prefs.load();
+  prefs.setRating("a-cafe", 4);
+  const raw = JSON.stringify(fullDoc({ schema: 2 }));
+  storage.setItem("jcf:prefs", raw);
+  const seen = [];
+  prefs.onChange((change) => seen.push(change.source));
+  events.storage({ key: "jcf:prefs", newValue: raw });
+  assert.equal(prefs.getStatus(), "newer");
+  assert.equal(sandbox.pending, null);
+  assert.deepEqual(seen, ["storage"]);
+  assert.equal(prefs.flush(), false);
+  assert.equal(storage.getItem("jcf:prefs"), raw);
+});
+
+test("flush checks for a newer schema even before its storage event arrives", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  prefs.setRating("a-cafe", 4);
+  const raw = JSON.stringify(fullDoc({ schema: 2 }));
+  storage.setItem("jcf:prefs", raw);
+  assert.equal(prefs.flush(), false);
+  assert.equal(prefs.getStatus(), "newer");
+  assert.equal(storage.getItem("jcf:prefs"), raw);
+});
+
+test("flush merges another tab's write even before its storage event arrives", () => {
+  const storage = memoryStorage();
+  const a = setup(storage, { now: T2 });
+  const b = setup(storage, { now: T3 });
+  a.prefs.load();
+  b.prefs.load();
+  a.prefs.setRating("a-cafe", 4);
+  b.prefs.setRating("b-cafe", 5);
+  a.prefs.flush();
+  b.prefs.flush();
+  assert.equal(stored(storage).ratings["a-cafe"].stars, 4);
+  assert.equal(stored(storage).ratings["b-cafe"].stars, 5);
+});
+
+test("flush preserves corrupt data written by another tab before replacing it", () => {
+  for (const backupFails of [false, true]) {
+    const storage = memoryStorage();
+    const { prefs } = setup(storage);
+    prefs.load();
+    prefs.setRating("a-cafe", 4);
+    storage.setItem("jcf:prefs", "{bad");
+    if (backupFails) {
+      storage.setItem = () => { throw new Error("QuotaExceededError"); };
+    }
+    assert.equal(prefs.flush(), !backupFails);
+    assert.equal(prefs.getStatus(), "corrupt");
+    if (backupFails) {
+      assert.equal(storage.getItem("jcf:prefs"), "{bad");
+    } else {
+      const backup = Array.from(storage.data.keys()).find((key) => key.startsWith("jcf:prefs:corrupt-"));
+      assert.equal(storage.getItem(backup), "{bad");
+      assert.equal(stored(storage).ratings["a-cafe"].stars, 4);
+    }
+  }
+});
+
+test("storage events from another storage area are ignored", () => {
+  const { prefs, events } = setup(memoryStorage());
+  prefs.load();
+  events.storage({ key: "jcf:prefs", newValue: JSON.stringify(fullDoc()), storageArea: {} });
+  assert.equal(prefs.getRating("codeine-coffee"), null);
+});
+
+test("getStatus reports a failed write and recovers after a successful retry", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  const realSet = storage.setItem;
+  storage.setItem = () => { throw new Error("QuotaExceededError"); };
+  prefs.setRating("a-cafe", 4);
+  prefs.flush();
+  assert.equal(prefs.getStatus(), "unavailable");
+  storage.setItem = realSet;
+  assert.equal(prefs.flush(), true);
+  assert.notEqual(prefs.getStatus(), "unavailable");
+});
+
+test("HTML loads UserPrefs before bootstrap and places the status notice first in main", () => {
+  const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
+  assert.ok(html.indexOf('src="user-prefs.js?') < html.indexOf('src="bootstrap.js?'));
+  assert.match(html, /<main class="main">\s*<div id="prefsNotice" class="prefs-notice" role="status" hidden><\/div>/);
+  assert.match(html, /href="prefs-notice\.css\?v=/);
+});
+
+async function bootstrapPrefs(prefs, storage) {
+  function element() {
+    return {
+      hidden: true, children: [], handlers: {},
+      appendChild(child) { this.children.push(child); },
+      addEventListener(type, fn) { this.handlers[type] = fn; },
+      set textContent(value) { this.text = value; this.children = []; },
+      get textContent() { return this.text; },
+    };
+  }
+  const notice = element();
+  const appended = [];
+  const warnings = [];
+  const sandbox = {
+    URL,
+    setTimeout: () => 1, clearTimeout() {},
+    console: { warn: (...args) => warnings.push(args), error() {} },
+    addEventListener() {},
+    localStorage: storage,
+    document: {
+      currentScript: null,
+      getElementById: (id) => id === "prefsNotice" ? notice : null,
+      createElement: element,
+      body: {
+        appendChild: (child) => appended.push(child),
+        prepend: () => assert.fail("Bad preferences must not block startup"),
+      },
+    },
+    loadCafeDatabase: async () => ({ cafes: [] }),
+    loadCafeFilters: async () => [],
+    loadMapPins: async () => ({}),
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(docs, "i18n.js"), "utf8"), sandbox);
+  if (storage) vm.runInContext(source, sandbox);
+  else sandbox.UserPrefs = prefs;
+  vm.runInContext(fs.readFileSync(path.join(docs, "bootstrap.js"), "utf8"), sandbox);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0].src, "app.js");
+  return { notice, sandbox, warnings };
+}
+
+test("bootstrap loads preferences once, renders each failure and supports dismissal", async () => {
+  for (const status of ["empty", "ok", "unavailable", "corrupt", "newer"]) {
+    let loads = 0;
+    const { notice, sandbox } = await bootstrapPrefs({
+      load() { loads += 1; return { status }; },
+      onChange() {},
+    });
+    assert.equal(loads, 1);
+    assert.equal(notice.hidden, ["empty", "ok"].includes(status));
+    if (!notice.hidden) {
+      assert.equal(notice.children[0].textContent, sandbox.APP_TRANSLATIONS.en.prefs[status]);
+      const button = notice.children[1];
+      assert.equal(button.type, "button");
+      assert.equal(button.textContent, "Dismiss");
+      button.handlers.click();
+      assert.equal(notice.hidden, true);
+    }
+  }
+});
+
+test("bootstrap still starts when UserPrefs is missing or load throws", async () => {
+  const missing = await bootstrapPrefs(undefined);
+  assert.equal(missing.notice.hidden, true);
+  const broken = await bootstrapPrefs({ load() { throw new Error("Broken prefs"); } });
+  assert.equal(broken.notice.hidden, false);
+  assert.equal(broken.warnings.length, 1);
+  assert.equal(broken.notice.children[0].textContent, broken.sandbox.APP_TRANSLATIONS.en.prefs.unavailable);
+});
+
+test("a real failed write displays the non-blocking notice after startup", async () => {
+  const storage = memoryStorage();
+  const { notice, sandbox } = await bootstrapPrefs(null, storage);
+  assert.equal(notice.hidden, true);
+  storage.setItem = () => { throw new Error("QuotaExceededError"); };
+  sandbox.UserPrefs.setRating("a-cafe", 4);
+  sandbox.UserPrefs.flush();
+  assert.equal(notice.hidden, false);
+  assert.equal(notice.children[0].textContent, sandbox.APP_TRANSLATIONS.en.prefs.unavailable);
+});
+
+test("bootstrap displays a newer-schema notice received after startup", async () => {
+  let listener;
+  const { notice, sandbox } = await bootstrapPrefs({
+    load: () => ({ status: "empty" }),
+    onChange: (fn) => { listener = fn; },
+    getStatus: () => "newer",
+  });
+  listener({ source: "storage" });
+  assert.equal(notice.hidden, false);
+  assert.equal(notice.children[0].textContent, sandbox.APP_TRANSLATIONS.en.prefs.newer);
+});
+
+test("a newer-schema warning takes priority over an earlier write failure", () => {
+  const storage = memoryStorage();
+  const { prefs, events } = setup(storage);
+  prefs.load();
+  const realSet = storage.setItem;
+  storage.setItem = () => { throw new Error("QuotaExceededError"); };
+  prefs.setRating("a-cafe", 4);
+  prefs.flush();
+  assert.equal(prefs.getStatus(), "unavailable");
+  storage.setItem = realSet;
+  const raw = JSON.stringify(fullDoc({ schema: 2 }));
+  storage.setItem("jcf:prefs", raw);
+  events.storage({ key: "jcf:prefs", newValue: raw });
+  assert.equal(prefs.getStatus(), "newer");
+  assert.equal(prefs.flush(), false);
+  assert.equal(storage.getItem("jcf:prefs"), raw);
+});

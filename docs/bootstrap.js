@@ -8,6 +8,39 @@
     ? new URL(document.currentScript.src, document.baseURI).searchParams.get("v")
     : null;
 
+  function showPrefsNotice(status) {
+    var notice = document.getElementById("prefsNotice");
+    if (!notice) return;
+    notice.textContent = "";
+    notice.hidden = ["unavailable", "corrupt", "newer"].indexOf(status) === -1;
+    if (notice.hidden) return;
+    var strings = APP_TRANSLATIONS.en.prefs;
+    var text = document.createElement("span");
+    text.textContent = strings[status];
+    var dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "link-btn prefs-notice-dismiss";
+    dismiss.textContent = strings.dismiss;
+    dismiss.addEventListener("click", function () { notice.hidden = true; });
+    notice.appendChild(text);
+    notice.appendChild(dismiss);
+  }
+
+  // Unlike display config, bad personal data must never block startup.
+  if (window.UserPrefs) {
+    try {
+      showPrefsNotice(window.UserPrefs.load().status);
+      window.UserPrefs.onChange(function (change) {
+        if (change.source === "save-failed" || change.source === "storage") {
+          showPrefsNotice(window.UserPrefs.getStatus());
+        }
+      });
+    } catch (error) {
+      console.warn("[UserPrefs] Cannot load personal settings:", error);
+      showPrefsNotice("unavailable");
+    }
+  }
+
   function showLoadError(error) {
     var alert = document.createElement("div");
     alert.className = "data-load-error";

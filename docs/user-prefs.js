@@ -87,7 +87,7 @@
   }
 
   function normalizeTagList(tags, suggestedLabels) {
-    var seen = {};
+    var seen = Object.create(null);
     var out = [];
     tags.forEach(function (tag) {
       var normalized = normalizeTag(tag, suggestedLabels);
@@ -315,7 +315,19 @@
 
   function onStorage(event) {
     if (!event || event.key !== STORAGE_KEY || typeof event.newValue !== "string" || state.readOnly) return;
+    if (event.storageArea && event.storageArea !== getStorage()) return;
     var result = interpret(event.newValue);
+    if (result.status === "newer") {
+      state.status = "newer";
+      state.saveFailed = false;
+      state.readOnly = true;
+      if (state.timer !== null) {
+        clearTimeout(state.timer);
+        state.timer = null;
+      }
+      notify({ source: "storage" });
+      return;
+    }
     if (result.status !== "ok") return;
     state.doc = state.timer === null ? result.doc : merge(state.doc, result.doc);
     notify({ source: "storage" });
@@ -325,7 +337,9 @@
     if (state.attached || typeof window.addEventListener !== "function") return;
     state.attached = true;
     window.addEventListener("storage", onStorage);
-    window.addEventListener("pagehide", flush);
+    window.addEventListener("pagehide", function () {
+      if (state.timer !== null) flush();
+    });
   }
 
   function load() {
@@ -391,6 +405,26 @@
     var storage = getStorage();
     try {
       if (!storage) throw new Error("localStorage is not available.");
+      // A different tab may have written before its storage event reaches us.
+      var raw = storage.getItem(STORAGE_KEY);
+      if (raw !== null) {
+        var result = interpret(raw);
+        if (result.status === "newer") {
+          state.status = "newer";
+          state.saveFailed = false;
+          state.readOnly = true;
+          notify({ source: "storage" });
+          return false;
+        }
+        if (result.status === "corrupt") {
+          setAside(storage, raw);
+          state.status = "corrupt";
+          notify({ source: "storage" });
+          if (state.readOnly) return false;
+        } else {
+          state.doc = merge(state.doc, result.doc);
+        }
+      }
       storage.setItem(STORAGE_KEY, JSON.stringify(state.doc));
     } catch (error) {
       warn("Cannot save settings:", error);
@@ -462,7 +496,7 @@
   }
 
   function allTags() {
-    var counts = {};
+    var counts = Object.create(null);
     var order = [];
     var tags = ensureDoc().tags;
     Object.keys(tags).forEach(function (id) {
@@ -556,7 +590,7 @@
     load: load,
     save: save,
     flush: flush,
-    getStatus: function () { return state.status; },
+    getStatus: function () { return state.saveFailed ? "unavailable" : state.status; },
     getRating: getRating,
     setRating: setRating,
     getTags: getTags,

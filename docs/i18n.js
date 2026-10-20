@@ -16,6 +16,12 @@ var APP_TRANSLATIONS = {
     errors: {
       load: "Cafe data or display configuration is not available. Refresh the page or try again later.",
     },
+    prefs: {
+      unavailable: "Your personal settings can't be saved in this browser and will be lost when you close the page.",
+      corrupt: "Your saved settings couldn't be read, so we set them aside and started fresh.",
+      newer: "Your settings were saved by a newer version of this app. Reload the page to update.",
+      dismiss: "Dismiss",
+    },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
       kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
