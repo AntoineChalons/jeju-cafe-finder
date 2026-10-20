@@ -585,6 +585,7 @@
   }
   document.getElementById("personalizeSave").addEventListener("click", function () {
     window.UserPrefs.setFilterPrefs(draftFilterPrefs(window.UserPrefs.getFilterPrefs()));
+    window.UserPrefs.flush();
     personalizeDialog.close();
   });
 

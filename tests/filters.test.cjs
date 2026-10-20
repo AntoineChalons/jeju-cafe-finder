@@ -381,6 +381,27 @@ test("all computed criteria work even when every configured filter is hidden", (
   sandbox.window.configureCafeFilters(filterConfig);
 });
 
+test("Save flushes the debounced preferences before closing the dialog", () => {
+  let save;
+  const calls = [];
+  const next = { order: [], hidden: ["pets"], shown: ["boardGames"], defaultOn: ["workFriendly"] };
+  const scope = {
+    document: { getElementById: () => ({ addEventListener: (type, fn) => { save = fn; } }) },
+    window: { UserPrefs: {
+      getFilterPrefs: () => ({}),
+      setFilterPrefs: (value) => { assert.equal(value, next); calls.push("set"); },
+      flush: () => calls.push("flush"),
+    } },
+    draftFilterPrefs: () => next,
+    personalizeDialog: { close: () => calls.push("close") },
+  };
+  vm.createContext(scope);
+  vm.runInContext(app.slice(app.indexOf('  document.getElementById("personalizeSave")'),
+    app.indexOf("  function refreshPersonalFilters(")), scope);
+  save();
+  assert.deepEqual(calls, ["set", "flush", "close"]);
+});
+
 test("early means strictly before 10 am on any day", () => {
   for (const [opening, expected] of [[480, true], [599, true], [600, false], [601, false]]) {
     assert.equal(sandbox.hasCriterion(cafe({ wed: [{ open: opening, close: 1080 }] }), "openEarly"), expected);
