@@ -41,6 +41,13 @@ var APP_TRANSLATIONS = {
       cancel: "Cancel",
       save: "Save",
     },
+    rating: {
+      title: "Your rating", star: "{n} of 5 stars", clear: "Clear rating",
+      none: "Not rated", filter: "My rating", any: "Any",
+      min3: "3+", min4: "4+", min5: "5", minLabel: "{n} stars or more",
+      includeUnrated: "Include unrated places",
+      label: "Your rating: {n} of 5", score: "{n}/5", edit: "Edit your rating for {name}",
+    },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
       kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
@@ -106,6 +113,7 @@ var APP_TRANSLATIONS = {
       empty: "No cafes match every filter you've selected. Try unchecking one.",
       noData: "No cafes have been added yet.",
       cafe: "Cafe", area: "Area", size: "Size", price: "Price", today: "Today", match: "Match",
+      myRating: "My rating",
       unknown: "—",
     },
     contact: {
@@ -122,6 +130,7 @@ var APP_TRANSLATIONS = {
     summary: {
       all: "{count} of {total} venues match your filters",
       kind: "{count} of {total} venues match your filters · {kind}",
+      hiddenByRating: "{count} hidden by your rating filter",
     },
     criteria: {
       openNow: "Open now", openTomorrow: "Open tomorrow", workFriendly: "Work friendly", localRoast: "Local roast",

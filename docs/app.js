@@ -299,6 +299,7 @@
     criteria: {},
     sizes: {},
     prices: {},
+    ratingFilter: window.UserPrefs ? window.UserPrefs.getRatingFilter() : { minStars: null, includeUnrated: true },
     sort: { key: "name", dir: "asc" },
   };
   var filterPrefs = window.UserPrefs ? window.UserPrefs.getFilterPrefs() : {
@@ -307,7 +308,7 @@
   var filterPrefsSignature = JSON.stringify(filterPrefs);
   if (window.UserPrefs) CRITERIA = window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, filterPrefs);
 
-  function clearFilters() {
+  function clearFilters(options) {
     state.kind = "All";
     state.criteria = {};
     CRITERIA.forEach(function (criterion) {
@@ -315,10 +316,18 @@
     });
     SIZES.forEach(function (size) { state.sizes[size] = false; });
     PRICES.forEach(function (price) { state.prices[price] = false; });
+    if (!options || !options.keepRating) {
+      var changed = state.ratingFilter.minStars !== null || !state.ratingFilter.includeUnrated;
+      state.ratingFilter = { minStars: null, includeUnrated: true };
+      if (changed && window.UserPrefs) {
+        window.UserPrefs.setRatingFilter(state.ratingFilter);
+        window.UserPrefs.flush();
+      }
+    }
   }
 
   function applyDefaultFilters() {
-    clearFilters();
+    clearFilters({ keepRating: true });
     filterPrefs.defaultOn.forEach(function (key) {
       if (Object.prototype.hasOwnProperty.call(state.criteria, key)) state.criteria[key] = true;
     });
@@ -342,17 +351,23 @@
   }
 
   // Venue type, size and price narrow the pool; criteria are "must have".
-  function matchesScope(cafe) {
+  function myRating(cafe) {
+    return window.UserPrefs ? window.UserPrefs.getRating(cafe.id) : null;
+  }
+
+  function matchesScope(cafe, ignoreRating) {
     if (state.kind !== "All" && cafe.kind !== state.kind) return false;
     var sizes = selectedValues(state.sizes);
     if (sizes.length && sizes.indexOf(cafe.size) === -1) return false;
     var prices = selectedValues(state.prices);
     if (prices.length && prices.indexOf(String(cafe.price)) === -1) return false;
-    return true;
+    // Array.filter supplies a numeric index as the second argument.
+    return ignoreRating === true || !window.UserPrefs ||
+      window.UserPrefs.passesRatingFilter(myRating(cafe), state.ratingFilter);
   }
 
-  function matchesFilters(cafe) {
-    if (!matchesScope(cafe)) return false;
+  function matchesFilters(cafe, ignoreRating) {
+    if (!matchesScope(cafe, ignoreRating)) return false;
     return selectedCriteriaKeys().every(function (key) {
       return hasCriterion(cafe, key);
     });
@@ -371,6 +386,45 @@
   var criteriaListEl = document.getElementById("criteriaList");
   var sizeListEl = document.getElementById("sizeList");
   var priceListEl = document.getElementById("priceList");
+  var ratingFilterListEl = document.getElementById("ratingFilterList");
+  var includeUnratedEl = document.getElementById("includeUnrated");
+
+  function saveRatingFilter() {
+    if (window.UserPrefs) {
+      window.UserPrefs.setRatingFilter(state.ratingFilter);
+      window.UserPrefs.flush();
+    }
+    update();
+  }
+
+  function renderRatingFilters() {
+    ratingFilterListEl.innerHTML = "";
+    [null, 3, 4, 5].forEach(function (minimum) {
+      var label = document.createElement("label");
+      label.className = "radio-chip";
+      label.innerHTML =
+        '<input type="radio" name="my-rating-filter" value="' + (minimum === null ? "any" : minimum) + '" aria-label="' +
+          escapeHtml(message(minimum === null ? "rating.any" : "rating.minLabel", { n: minimum })) + '" />' +
+        "<span>" + (minimum === null ? "" : starHtml(true)) +
+          escapeHtml(message(minimum === null ? "rating.any" : "rating.min" + minimum)) + "</span>";
+      var input = label.querySelector("input");
+      input.checked = state.ratingFilter.minStars === minimum;
+      input.addEventListener("change", function () {
+        if (!input.checked) return;
+        state.ratingFilter.minStars = minimum;
+        includeUnratedEl.disabled = minimum === null;
+        saveRatingFilter();
+      });
+      ratingFilterListEl.appendChild(label);
+    });
+    includeUnratedEl.checked = state.ratingFilter.includeUnrated;
+    includeUnratedEl.disabled = state.ratingFilter.minStars === null;
+  }
+
+  includeUnratedEl.addEventListener("change", function () {
+    state.ratingFilter.includeUnrated = includeUnratedEl.checked;
+    saveRatingFilter();
+  });
 
   function renderKinds() {
     kindListEl.innerHTML = "";
@@ -441,6 +495,7 @@
     renderToggleChips(priceListEl, PRICES, state.prices, priceSymbol, function (price) {
       return message("prices." + price);
     }, "toggle-price-");
+    renderRatingFilters();
   }
 
   document.getElementById("resetBtn").title = message("filters.resetHint");
@@ -886,6 +941,7 @@
       escapeHtml(display.name) + EXTERNAL_SVG + "</a>" +
       '<div class="popup-kr">' + (secondaryName(cafe) ? escapeHtml(secondaryName(cafe)) + " · " : "") + escapeHtml(regionName(cafe.region)) + "</div>" +
       (cafe.size || cafe.price ? '<div class="popup-meta">' + metaPills(cafe) + "</div>" : "") +
+      ratingControlHtml(cafe) +
       hoursBlockHtml(cafe) +
       contactHtml(cafe) +
       '<p class="popup-blurb">' + escapeHtml(display.blurb) + "</p>" +
@@ -896,6 +952,77 @@
         ? '<span class="popup-source">' + escapeHtml(message("map.source")) + ' <a href="' + safeUrl(cafe.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(message("map.reference")) + "</a></span>"
         : "")
     );
+  }
+
+  function starHtml(filled) {
+    return '<svg class="rating-star' + (filled ? " is-filled" : "") + '" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="m12 2.5 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5-4.7-4.6 6.5-.9z"/></svg>';
+  }
+
+  function ratingControlHtml(cafe) {
+    var stars = myRating(cafe);
+    var radios = [1, 2, 3, 4, 5].map(function (n) {
+      return '<label class="rating-choice"><input type="radio" name="rating-' + escapeHtml(cafe.id) +
+        '" id="rating-' + escapeHtml(cafe.id) + "-" + n + '" data-rating-cafe="' + escapeHtml(cafe.id) +
+        '" value="' + n + '" aria-label="' + escapeHtml(message("rating.star", { n: n })) + '"' +
+        (stars === n ? " checked" : "") + (window.UserPrefs ? "" : " disabled") + ">" + starHtml(stars !== null && n <= stars) + "</label>";
+    }).join("");
+    return '<fieldset class="rating-control"><legend class="sr-only">' + escapeHtml(message("rating.title")) + "</legend>" +
+      '<span class="rating-title" aria-hidden="true">' + escapeHtml(message("rating.title")) + "</span>" +
+      '<div class="rating-line"><div class="rating-choices">' + radios + '</div><span class="rating-value">' +
+        escapeHtml(stars === null ? message("table.unknown") : message("rating.score", { n: stars })) + "</span></div>" +
+      (stars === null ? "" : '<button type="button" class="link-btn rating-clear" data-clear-rating="' + escapeHtml(cafe.id) + '">' +
+        escapeHtml(message("rating.clear")) + "</button>") + "</fieldset>";
+  }
+
+  function refreshPopup(popup, cafe) {
+    popup.setHTML(buildPopupHtml(cafe));
+    if (!popup.isOpen()) return;
+    var content = popup.getElement().querySelector(".maplibregl-popup-content");
+    if (content) content.style.maxHeight = Math.round(map.getContainer().clientHeight * 0.85 - 44) + "px";
+    popup.setLngLat([cafe.lng, cafe.lat]);
+  }
+
+  function restoreRatingFocus(id, stars) {
+    var input = document.getElementById("rating-" + id + "-" + (stars === null ? 1 : stars));
+    if (input) {
+      input.focus({ preventScroll: true });
+      return;
+    }
+    // A low rating can hide this cafe and close its popup.
+    var fallback = window.matchMedia("(max-width: 900px)").matches && !sidebar.classList.contains("open")
+      ? sidebarToggle : ratingFilterListEl.querySelector("input:checked");
+    if (fallback) fallback.focus();
+  }
+
+  function saveCafeRating(id, stars) {
+    if (!Object.prototype.hasOwnProperty.call(cafesById, id) ||
+        !window.UserPrefs || !window.UserPrefs.setRating(id, stars)) return;
+    window.UserPrefs.flush();
+    update({ fit: false });
+    restoreRatingFocus(id, stars);
+  }
+
+  document.addEventListener("change", function (event) {
+    var input = event.target;
+    if (input.matches && input.matches("input[data-rating-cafe]") && input.checked) {
+      saveCafeRating(input.getAttribute("data-rating-cafe"), Number(input.value));
+    }
+  });
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-clear-rating]");
+    if (button) saveCafeRating(button.getAttribute("data-clear-rating"), null);
+  });
+
+  function refreshPersonalRatings(change) {
+    if (change.source !== "storage") return;
+    var focused = document.activeElement;
+    var id = focused && focused.getAttribute("data-rating-cafe");
+    var stars = id ? Number(focused.value) : null;
+    state.ratingFilter = window.UserPrefs.getRatingFilter();
+    renderRatingFilters();
+    update({ fit: false });
+    if (id) restoreRatingFocus(id, stars);
   }
 
   // The weekly hours toggle lives inside popup HTML, so use delegation and
@@ -953,10 +1080,8 @@
       // Refresh the open/closed state each time the popup opens, and move the
       // marker into the lower part of the map so the popup has room above it.
       popup.on("open", function () {
-        popup.setHTML(buildPopupHtml(cafe));
+        refreshPopup(popup, cafe);
         var height = map.getContainer().clientHeight;
-        var content = popup.getElement() && popup.getElement().querySelector(".maplibregl-popup-content");
-        if (content) content.style.maxHeight = Math.round(height * 0.85 - 44) + "px";
         map.easeTo({
           center: [cafe.lng, cafe.lat],
           offset: [0, Math.round(height * 0.35)],
@@ -992,7 +1117,7 @@
         element.setAttribute("aria-label", mapPinTitle(cafe));
         element.title = mapPinTitle(cafe);
         element.classList.toggle("is-closed", hoursStatus(cafe).state === "closed");
-        marker.getPopup().setHTML(buildPopupHtml(cafe));
+        refreshPopup(marker.getPopup(), cafe);
       }
     });
     scheduleMapLabels();
@@ -1028,11 +1153,20 @@
       if (other !== id && markers[other].getPopup().isOpen()) markers[other].togglePopup();
     });
     if (!marker.getPopup().isOpen()) marker.togglePopup();
+    var cafe = cafesById[id];
+    map.easeTo({
+      center: [cafe.lng, cafe.lat],
+      offset: [0, Math.round(map.getContainer().clientHeight * 0.35)], duration: 500,
+    });
   }
 
   document.addEventListener("click", function (event) {
     var button = event.target.closest && event.target.closest("[data-show-on-map]");
-    if (button) showOnMap(button.getAttribute("data-show-on-map"));
+    if (button) {
+      var id = button.getAttribute("data-show-on-map");
+      showOnMap(id);
+      if (button.classList.contains("table-rating")) restoreRatingFocus(id, myRating(cafesById[id]));
+    }
   });
 
   function showOnMapButton(cafe) {
@@ -1061,6 +1195,7 @@
       { key: "size", label: message("table.size") },
       { key: "price", label: message("table.price") },
       { key: "today", label: message("table.today") },
+      { key: "myRating", label: message("table.myRating") },
     ].concat(
       CRITERIA.map(function (criterion) {
         return { key: criterion.key, label: criterionLabel(criterion), title: criterionLabel(criterion), noTranslate: true };
@@ -1111,7 +1246,7 @@
       state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc";
     } else {
       state.sort.key = key;
-      state.sort.dir = key === "match" || COMPUTED_KEYS[key] || !!CRITERIA.filter(function (c) { return c.key === key; }).length ? "desc" : "asc";
+      state.sort.dir = key === "myRating" || key === "match" || COMPUTED_KEYS[key] || !!CRITERIA.filter(function (c) { return c.key === key; }).length ? "desc" : "asc";
     }
     update({ fit: false });
   }
@@ -1120,6 +1255,7 @@
   var SIZE_ORDER = { tiny: 0, medium: 1, large: 2 };
 
   function sortValue(cafe, key, comparedKeys) {
+    if (key === "myRating") return myRating(cafe);
     if (key === "match") return matchCount(cafe, comparedKeys);
     if (key === "name") return cafeText(cafe).name.toLocaleLowerCase("en");
     if (key === "region") return regionLabel(cafe.region);
@@ -1129,12 +1265,33 @@
     return hasCriterion(cafe, key) ? 1 : 0;
   }
 
+  function compareMyRatings(a, b, direction) {
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return (a - b) * direction;
+  }
+
+  function tableRatingHtml(cafe) {
+    var stars = myRating(cafe);
+    var label = stars === null ? message("rating.none") : message("rating.label", { n: stars });
+    return '<button type="button" class="table-rating" data-show-on-map="' + escapeHtml(cafe.id) +
+      '" aria-label="' + escapeHtml(label) + '" title="' + escapeHtml(message("rating.edit", { name: cafeText(cafe).name })) + '">' +
+      (stars === null ? escapeHtml(message("table.unknown")) : '<span class="table-rating-stars">' +
+        [1, 2, 3, 4, 5].map(function (n) { return starHtml(n <= stars); }).join("") +
+        '</span><span aria-hidden="true">' + escapeHtml(message("rating.score", { n: stars })) + "</span>") + "</button>";
+  }
+
   function renderTable(filteredSet) {
     var selectedKeys = selectedCriteriaKeys();
     var comparedKeys = selectedKeys.length ? selectedKeys : allCriteriaKeys();
     var rows = CAFES.slice();
     var direction = state.sort.dir === "asc" ? 1 : -1;
     rows.sort(function (a, b) {
+      if (state.sort.key === "myRating") {
+        var byRating = compareMyRatings(myRating(a), myRating(b), direction);
+        if (byRating) return byRating;
+      }
       var aValue = sortValue(a, state.sort.key, comparedKeys);
       var bValue = sortValue(b, state.sort.key, comparedKeys);
       if (aValue < bValue) return -1 * direction;
@@ -1157,7 +1314,8 @@
         '<td><span class="region-pill region-' + cafe.region + '">' + escapeHtml(regionLabel(cafe.region)) + "</span></td>" +
         "<td>" + (cafe.size ? escapeHtml(sizeLabel(cafe.size)) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
         '<td class="cell-price">' + (cafe.price ? priceSymbol(cafe.price) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
-        '<td><div class="cell-today">' + statusBadge(status) + "<small>" + escapeHtml(cafe.hasHours ? todayHoursText(cafe) : "") + "</small></div></td>";
+        '<td><div class="cell-today">' + statusBadge(status) + "<small>" + escapeHtml(cafe.hasHours ? todayHoursText(cafe) : "") + "</small></div></td>" +
+        "<td>" + tableRatingHtml(cafe) + "</td>";
 
       CRITERIA.forEach(function (criterion) {
         cells += hasCriterion(cafe, criterion.key)
@@ -1262,11 +1420,15 @@
    * --------------------------------------------------------- */
   var resultsSummaryEl = document.getElementById("resultsSummary");
 
-  function renderSummary(filteredCount) {
+  function renderSummary(filteredCount, hiddenByRating) {
     var count = "<strong>" + filteredCount + "</strong>";
     resultsSummaryEl.innerHTML = state.kind === "All"
       ? message("summary.all", { count: count, total: CAFES.length })
       : message("summary.kind", { count: count, total: CAFES.length, kind: escapeHtml(kindLabel(state.kind)) });
+    if (hiddenByRating > 0) {
+      resultsSummaryEl.innerHTML += '<span class="summary-rating-hidden"> · ' +
+        escapeHtml(message("summary.hiddenByRating", { count: hiddenByRating })) + "</span>";
+    }
   }
 
   function update(options) {
@@ -1278,7 +1440,9 @@
       filteredSet[cafe.id] = true;
     });
 
-    renderSummary(filtered.length);
+    var hiddenByRating = state.ratingFilter.minStars === null ? 0 :
+      CAFES.filter(function (cafe) { return matchesFilters(cafe, true); }).length - filtered.length;
+    renderSummary(filtered.length, hiddenByRating);
     renderTable(filteredSet);
     renderRecommendations();
     if (mapReady) updateMapMarkers(filtered, fit);
@@ -1300,4 +1464,5 @@
   renderTableHeader();
   update();
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalFilters);
+  if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalRatings);
 })();

@@ -737,3 +737,22 @@ test("removed filter preferences survive persistence and apply when config reint
     { key: "goneFilter", enabled: false, index: 5 },
   ]), before)[0].key, "goneFilter");
 });
+
+test("ratings and their filter persist together, with clear tombstones and orphan IDs retained", () => {
+  const storage = memoryStorage();
+  const first = setup(storage);
+  first.prefs.load();
+  first.prefs.setRating("published-cafe", 5);
+  first.prefs.setRating("unpublished-cafe", 2);
+  first.prefs.setRatingFilter({ minStars: 3, includeUnrated: false });
+  first.prefs.flush();
+  const second = setup(storage, { now: T2 });
+  second.prefs.load();
+  assert.equal(second.prefs.getRating("published-cafe"), 5);
+  assert.deepEqual(plain(second.prefs.getRatingFilter()), { minStars: 3, includeUnrated: false });
+  second.prefs.setRating("published-cafe", null);
+  second.prefs.flush();
+  assert.deepEqual(stored(storage).ratings["published-cafe"], { stars: null, updatedAt: T2 });
+  assert.equal(stored(storage).ratings["unpublished-cafe"].stars, 2);
+  assert.equal(second.prefs.passesRatingFilter(null, second.prefs.getRatingFilter()), false);
+});

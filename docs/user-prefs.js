@@ -564,6 +564,12 @@
     return true;
   }
 
+  function passesRatingFilter(stars, filter) {
+    if (!isObject(filter) || MIN_STARS_VALUES.indexOf(filter.minStars) === -1) return true;
+    if (!isValidStars(stars)) return filter.includeUnrated !== false;
+    return stars >= filter.minStars;
+  }
+
   function getRatingFilter() {
     var r = ensureDoc().ratingFilter;
     return { minStars: r.minStars, includeUnrated: r.includeUnrated };
@@ -626,6 +632,7 @@
     applyFilterPrefs: applyFilterPrefs,
     setFilterPrefs: setFilterPrefs,
     getRatingFilter: getRatingFilter,
+    passesRatingFilter: passesRatingFilter,
     setRatingFilter: setRatingFilter,
     getAroundMe: getAroundMe,
     setAroundMe: setAroundMe,

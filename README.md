@@ -15,6 +15,11 @@ Users can:
 - Choose visible criteria, their order and default selections through
   Personalize beside Reset. All filters listed in `filters-config.json` are
   available there, including those hidden by default.
+- Give each cafe a private 1–5 star rating in its map popup. Open a popup from
+  the My rating table cell, or sort that column (unrated cafes always sort last).
+- Use My rating: Any, 3+, 4+ or 5. Include unrated places is on by default:
+  3+ hides your 1–2 star cafes without hiding places you haven't rated yet.
+  Untick it to see only rated cafes meeting the threshold.
 - Narrow by size (tiny ≤ 10 seats, medium 11–20, large > 20) and price range
   ($, $$, $$$). Selecting none includes all; unknown values never match a
   selected option.
@@ -55,11 +60,18 @@ and choose which start switched on. Save applies the draft; Cancel, Escape
 and clicking the desktop backdrop discard it. Restore defaults stages a reset
 of just these filter settings until Save is pressed; ratings and tags are
 untouched. Reset and page loads apply the saved default-on selections.
-Clear filters on the empty-map overlay clears all active criteria instead
-of reapplying defaults.
+Reset keeps the saved My rating filter. Clear filters on the empty-map overlay
+clears all active criteria and saves My rating back to Any with unrated places
+included, instead of reapplying defaults. The summary explains how many places
+the rating filter hides within the other active filters.
 
-`window.UserPrefs` also provides storage for ratings, tags, the rating filter
-and the around-me mode/radius. Their feature controls and JSON export/import
+Ratings and the chosen rating filter persist across visits. Clear rating removes
+the displayed stars but keeps a timestamped null entry (a tombstone) for cross-tab
+merging. Ratings for IDs absent from the published data stay stored but never
+appear in the UI; published cafe IDs must not be renamed.
+
+`window.UserPrefs` also provides storage for tags and the around-me mode/radius.
+Their feature controls and JSON export/import
 will arrive in the follow-up personalization issues. Export is not available
 in this release.
 

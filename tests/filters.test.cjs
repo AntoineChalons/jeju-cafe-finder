@@ -218,14 +218,18 @@ test("default-on filters apply on startup and Reset only when visible", () => {
   scope.state.kind = "bakery";
   scope.state.sizes.tiny = true;
   scope.state.prices[3] = true;
+  scope.UserPrefs.setRatingFilter({ minStars: 4, includeUnrated: false });
+  scope.state.ratingFilter = scope.UserPrefs.getRatingFilter();
   scope.applyDefaultFilters();
   assert.equal(scope.state.criteria.workFriendly, true);
   assert.equal(scope.state.kind, "All");
   assert.equal(scope.state.sizes.tiny, false);
   assert.equal(scope.state.prices[3], false);
+  assert.deepEqual(JSON.parse(JSON.stringify(scope.state.ratingFilter)), { minStars: 4, includeUnrated: false });
   scope.clearFilters();
   assert.equal(scope.state.criteria.workFriendly, false);
   assert.equal(scope.state.criteria.boardGames, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(scope.UserPrefs.getRatingFilter())), { minStars: null, includeUnrated: true });
 });
 
 test("saving visibility/order changes removes hidden active criteria and invalid sort", () => {
