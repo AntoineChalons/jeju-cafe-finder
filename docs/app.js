@@ -611,15 +611,19 @@
     document.getElementById("personalizeTagStatus").textContent = "";
     renderFilterDraft();
     renderTagManagement();
+    resetDataImport();
+    renderDataSummary();
     personalizeDialog.showModal();
   });
   personalizeDialog.addEventListener("close", function () {
     filterDraft = [];
+    resetDataImport();
     personalizeBtn.focus();
   });
   personalizeDialog.addEventListener("keydown", function (event) {
     if (event.key !== "Tab") return;
-    var controls = personalizeDialog.querySelectorAll("button:not(:disabled), input:not(:disabled)");
+    var controls = Array.from(personalizeDialog.querySelectorAll("button:not(:disabled), input:not(:disabled), textarea:not(:disabled)"))
+      .filter(function (control) { return control.getClientRects().length > 0; });
     var first = controls[0];
     var last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first) {
@@ -673,10 +677,11 @@
     personalizeDialog.close();
   });
 
-  function refreshPersonalFilters() {
+  function refreshPersonalFilters(change) {
     var next = window.UserPrefs.getFilterPrefs();
     var signature = JSON.stringify(next);
-    if (signature === filterPrefsSignature) return;
+    var reset = change && (change.source === "import" || change.source === "delete");
+    if (signature === filterPrefsSignature && !reset) return;
     filterPrefs = next;
     filterPrefsSignature = signature;
     CRITERIA = window.UserPrefs.applyFilterPrefs(CONFIGURED_CRITERIA, filterPrefs);
@@ -687,12 +692,215 @@
     visible.forEach(function (key) {
       if (!Object.prototype.hasOwnProperty.call(state.criteria, key)) state.criteria[key] = false;
     });
+    if (reset) applyDefaultFilters();
+    if (change && change.source === "delete") state.sort = { key: "name", dir: "asc" };
     if (!tableColumns().some(function (column) { return column.key === state.sort.key; })) {
       state.sort = { key: "name", dir: "asc" };
     }
     renderControls();
     renderTableHeader();
     update({ fit: false });
+  }
+
+  /* ---------------------------------------------------------
+   * Personal data backup and restore
+   * --------------------------------------------------------- */
+  var pendingBackupText = null;
+  var dataReadVersion = 0;
+  var dataText = document.getElementById("dataText");
+  var dataError = document.getElementById("dataError");
+  var dataStatus = document.getElementById("dataStatus");
+
+  function clearImportPreview() {
+    dataReadVersion += 1;
+    pendingBackupText = null;
+    document.getElementById("dataPreview").hidden = true;
+    dataError.textContent = "";
+    dataStatus.textContent = "";
+  }
+
+  function resetDataImport() {
+    clearImportPreview();
+    dataText.value = "";
+    document.getElementById("dataImportFile").value = "";
+    document.getElementById("dataPasteArea").hidden = true;
+  }
+
+  function renderDataSummary() {
+    var summary = window.UserPrefs.getSummary();
+    document.getElementById("dataSummary").textContent = message("data.summary", summary) +
+      (summary.filters ? " · " + message("data.filterSaved") : "");
+    var date = summary.lastExportAt
+      ? window.UserPrefs.exportFilename(summary.lastExportAt).match(/\d{4}-\d{2}-\d{2}/)[0] : message("data.never");
+    document.getElementById("dataLastExport").textContent = message("data.lastExport", { date: date });
+    document.getElementById("dataStorage").textContent = message(summary.readOnly ?
+      window.UserPrefs.getStatus() === "newer" ? "data.readOnly" : "data.protected" :
+      window.UserPrefs.getStatus() === "unavailable" ? "data.memory" : "data.saved");
+    ["dataExport", "dataCopy", "dataApply"].forEach(function (id) {
+      document.getElementById(id).disabled = summary.readOnly;
+    });
+    document.getElementById("dataRemoveRecovery").hidden = summary.recoveryCount === 0;
+    // Capability hints, not a user-agent string. Keep standalone apps exempt.
+    var webKitHints = "standalone" in navigator || "ApplePaySession" in window || typeof window.GestureEvent === "function";
+    var standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    document.getElementById("dataSafariWarning").hidden = !webKitHints || standalone;
+  }
+
+  function showImportPreview(text) {
+    clearImportPreview();
+    var preview = window.UserPrefs.importDoc(text);
+    if (!preview.valid) {
+      dataError.textContent = message("data." + preview.error);
+      return;
+    }
+    pendingBackupText = text;
+    var unknown = preview.ids.filter(function (id) {
+      return !Object.prototype.hasOwnProperty.call(cafesById, id);
+    }).length;
+    var summary = document.getElementById("dataPreviewSummary");
+    summary.textContent = message("data.preview", {
+      ratings: preview.ratings, tagged: preview.tagged,
+      filters: preview.filters ? message("data.previewFilters") : "",
+    });
+    document.getElementById("dataUnknown").textContent = unknown ? message("data.unknownIds", { count: unknown }) : "";
+    document.getElementById("dataSkipped").textContent = preview.skipped ? message("data.skipped", { count: preview.skipped }) : "";
+    document.querySelector('input[name="data-import-mode"][value="merge"]').checked = true;
+    document.getElementById("dataReplaceWarning").hidden = true;
+    document.getElementById("dataPreview").hidden = false;
+    renderDataSummary();
+    summary.focus();
+  }
+
+  function showBackupText(text, status) {
+    if (!personalizeDialog.open) return;
+    clearImportPreview();
+    document.getElementById("dataPasteArea").hidden = false;
+    dataText.value = text;
+    dataStatus.textContent = message(status);
+    dataText.focus();
+    dataText.select();
+  }
+
+  document.getElementById("dataExport").addEventListener("click", function () {
+    var doc = window.UserPrefs.exportDoc();
+    if (!doc) return;
+    dataReadVersion += 1;
+    var text = JSON.stringify(doc, null, 2);
+    var url = null;
+    var link = null;
+    try {
+      url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+      link = document.createElement("a");
+      link.href = url;
+      link.download = window.UserPrefs.exportFilename(doc.exportedAt);
+      link.hidden = true;
+      document.body.appendChild(link);
+      link.click();
+      window.UserPrefs.markExported();
+      dataError.textContent = "";
+      dataStatus.textContent = message("data.exported");
+    } catch (ignored) {
+      showBackupText(text, "data.downloadFallback");
+    } finally {
+      if (link) link.remove();
+      if (url) setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+  });
+  document.getElementById("dataCopy").addEventListener("click", async function () {
+    var doc = window.UserPrefs.exportDoc();
+    if (!doc) return;
+    var text = JSON.stringify(doc, null, 2);
+    var version = ++dataReadVersion;
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(text);
+      if (personalizeDialog.open && version === dataReadVersion) {
+        window.UserPrefs.markExported();
+        dataError.textContent = "";
+        dataStatus.textContent = message("data.copied");
+      }
+    } catch (ignored) {
+      if (version === dataReadVersion) showBackupText(text, "data.copyFallback");
+    }
+  });
+  document.getElementById("dataImport").addEventListener("click", function () {
+    document.getElementById("dataImportFile").click();
+  });
+  document.getElementById("dataImportFile").addEventListener("change", async function (event) {
+    var input = event.target;
+    var file = input.files[0];
+    clearImportPreview();
+    var version = dataReadVersion;
+    if (!file) return;
+    if (file.size > window.UserPrefs.MAX_IMPORT_BYTES) {
+      dataError.textContent = message("data.tooLarge");
+      input.value = "";
+      return;
+    }
+    try {
+      var text = await file.text();
+      if (version !== dataReadVersion || !personalizeDialog.open) return;
+      input.value = "";
+      if (!document.getElementById("dataPasteArea").hidden) dataText.value = text;
+      showImportPreview(text);
+    } catch (ignored) {
+      if (version === dataReadVersion && personalizeDialog.open) {
+        input.value = "";
+        dataError.textContent = message("data.invalid");
+      }
+    }
+  });
+  document.getElementById("dataPaste").addEventListener("click", function () {
+    clearImportPreview();
+    document.getElementById("dataPasteArea").hidden = false;
+    dataText.focus();
+  });
+  dataText.addEventListener("input", clearImportPreview);
+  document.getElementById("dataPreviewText").addEventListener("click", function () {
+    showImportPreview(dataText.value);
+  });
+  document.getElementById("dataPreview").addEventListener("change", function () {
+    document.getElementById("dataReplaceWarning").hidden =
+      !document.querySelector('input[name="data-import-mode"][value="replace"]').checked;
+  });
+  document.getElementById("dataApply").addEventListener("click", function () {
+    if (pendingBackupText === null) return;
+    var mode = document.querySelector('input[name="data-import-mode"]:checked').value;
+    var result = window.UserPrefs.importDoc(pendingBackupText, mode);
+    if (!result.valid) {
+      dataError.textContent = message("data." + result.error);
+      renderDataSummary();
+      return;
+    }
+    resetDataImport();
+    dataStatus.textContent = message("data.imported") + (result.persistent ? "" : " " + message("data.memory"));
+    document.getElementById("dataPaste").focus();
+  });
+  document.getElementById("dataDelete").addEventListener("click", function () {
+    if (!window.confirm(message("data.confirmDelete"))) return;
+    var result = window.UserPrefs.deleteAll();
+    dataError.textContent = result.ok ? "" : message("data.deleteFailed");
+    dataStatus.textContent = result.ok ? message(result.persistent ? "data.deleted" : "data.deletedMemory") : "";
+    document.getElementById("dataDelete").focus();
+  });
+  document.getElementById("dataRemoveRecovery").addEventListener("click", function () {
+    if (!window.confirm(message("data.confirmRecovery"))) return;
+    var ok = window.UserPrefs.removeRecoveryCopies();
+    dataError.textContent = ok ? "" : message("data.recoveryFailed");
+    dataStatus.textContent = ok ? message("data.recoveryRemoved") : "";
+    document.getElementById("dataDelete").focus();
+  });
+
+  function refreshPersonalData(change) {
+    if (!personalizeDialog.open) return;
+    if (change.source === "import" || change.source === "delete") {
+      filterDraft = makeFilterDraft(window.UserPrefs.getFilterPrefs());
+      restoringFilterDefaults = false;
+      renderFilterDraft();
+      renderTagManagement();
+      resetDataImport();
+    }
+    renderDataSummary();
   }
 
   /* ---------------------------------------------------------
@@ -1069,14 +1277,14 @@
   window.addEventListener("pagehide", clearPositionWatch);
   window.addEventListener("pageshow", resumeLocationWatch);
   if (window.UserPrefs) window.UserPrefs.onChange(function (change) {
-    if (!change || change.source !== "storage") return;
+    if (!change || ["storage", "import", "delete"].indexOf(change.source) === -1) return;
     var next = window.UserPrefs.getAroundMe();
     state.aroundMe = { enabled: next.enabled, radiusKm: AROUND_ME_RADII_KM.indexOf(next.radiusKm) === -1 ? null : next.radiusKm };
     if (!next.enabled && aroundMeActive) stopAroundMe("", false);
     else {
       renderDistanceFilter();
       update({ fit: false });
-      autoStartAroundMe();
+      if (change.source === "storage") autoStartAroundMe();
     }
   });
 
@@ -1503,7 +1711,7 @@
   });
 
   function refreshPersonalRatings(change) {
-    if (change.source !== "storage") return;
+    if (["storage", "import", "delete"].indexOf(change.source) === -1) return;
     var focused = document.activeElement;
     var id = focused && focused.getAttribute("data-rating-cafe");
     var stars = id ? Number(focused.value) : null;
@@ -1961,5 +2169,6 @@
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalFilters);
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalRatings);
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalTags);
+  if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalData);
   initializeAroundMe();
 })();
