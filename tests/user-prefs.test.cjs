@@ -18,6 +18,8 @@ function memoryStorage(initial) {
     getItem: (key) => (data.has(key) ? data.get(key) : null),
     setItem: (key, value) => { data.set(key, String(value)); },
     removeItem: (key) => { data.delete(key); },
+    get length() { return data.size; },
+    key: (index) => Array.from(data.keys())[index] ?? null,
   };
 }
 
@@ -70,6 +72,375 @@ function fullDoc(overrides) {
 function stored(storage) {
   return JSON.parse(storage.getItem("jcf:prefs"));
 }
+
+test("backup UI messages resolve in the English-only dictionary, with visible error/status regions", () => {
+  const scope = {};
+  vm.runInNewContext(fs.readFileSync(path.join(docs, "i18n.js"), "utf8"), scope);
+  assert.deepEqual(Object.keys(scope.APP_TRANSLATIONS), ["en"]);
+  const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
+  for (const match of html.matchAll(/data-i18n="(data\.[^"]+)"/g)) {
+    const value = match[1].split(".").reduce((obj, key) => obj && obj[key], scope.APP_TRANSLATIONS.en);
+    assert.equal(typeof value, "string", match[1]);
+  }
+  for (const key of ["invalid", "tooLarge", "readOnly", "protected", "changed"]) {
+    assert.equal(typeof scope.APP_TRANSLATIONS.en.data[key], "string");
+  }
+  assert.match(html, /id="dataError"[^>]+role="alert"/);
+  assert.match(html, /id="dataStatus"[^>]+role="status"/);
+  assert.match(html, /type="file"[^>]+id="dataImportFile"[^>]+hidden/);
+  assert.match(html, /<textarea[^>]+id="dataText"/);
+});
+
+test("stale Clipboard completion after closing/reset never recreates export metadata", async () => {
+  const app = fs.readFileSync(path.join(docs, "app.js"), "utf8");
+  for (const stale of [false, true]) {
+    let handler, resolveCopy, marks = 0;
+    const scope = {
+      document: { getElementById: () => ({ addEventListener(type, fn) { handler = fn; } }) },
+      UserPrefs: { exportDoc: () => fullDoc(), markExported: () => { marks++; } },
+      navigator: { clipboard: { writeText: () => new Promise(resolve => { resolveCopy = resolve; }) } },
+      dataReadVersion: 0, personalizeDialog: { open: true }, dataError: {}, dataStatus: {},
+      message: key => key, showBackupText() { throw new Error("Unexpected fallback"); },
+    };
+    scope.window = scope;
+    vm.runInNewContext(app.slice(app.indexOf('  document.getElementById("dataCopy").addEventListener'),
+      app.indexOf('  document.getElementById("dataImport").addEventListener')), scope);
+    const pending = handler();
+    if (stale) { scope.dataReadVersion++; scope.personalizeDialog.open = false; }
+    resolveCopy();
+    await pending;
+    assert.equal(marks, stale ? 0 : 1);
+  }
+});
+
+test("export is a detached whitelist with tombstones but no local-only or location fields", () => {
+  const doc = fullDoc({ lastExportAt: T1, extra: "no", ratings: { old: { stars: null, updatedAt: T1 } },
+    aroundMe: { enabled: true, radiusKm: 3, lat: 33.4, lng: 126.5, updatedAt: T1 } });
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(doc), "jcf:prefs:corrupt-old": "secret" });
+  const { prefs } = setup(storage, { now: T2 });
+  prefs.load();
+  const backup = plain(prefs.exportDoc());
+  assert.deepEqual(Object.keys(backup).sort(), ["app", "schema", "updatedAt", "exportedAt", "filters", "ratings", "tags", "ratingFilter", "aroundMe"].sort());
+  assert.deepEqual(backup.aroundMe, { radiusKm: 3, updatedAt: T1 });
+  assert.deepEqual(backup.ratings.old, { stars: null, updatedAt: T1 });
+  assert.equal(backup.exportedAt, T2);
+  backup.tags["codeine-coffee"].tags.push("detached");
+  assert.equal(prefs.getTags("codeine-coffee").includes("detached"), false);
+  assert.equal(prefs.getSummary().lastExportAt, T1);
+});
+
+test("export filename uses the Seoul date across a UTC midnight boundary", () => {
+  const { prefs } = setup(memoryStorage());
+  assert.equal(prefs.exportFilename("2026-10-19T15:01:00.000Z"), "jeju-cafe-finder-2026-10-20.json");
+  assert.equal(prefs.exportFilename("2026-10-19T14:59:00.000Z"), "jeju-cafe-finder-2026-10-19.json");
+});
+
+test("preview never writes, schedules a save, logs input or changes preferences", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage);
+  h.prefs.load();
+  const before = storage.getItem("jcf:prefs");
+  const preview = h.prefs.importDoc(JSON.stringify(fullDoc({ ratings: { unknown: { stars: 5, updatedAt: T3 } } })));
+  assert.equal(preview.valid, true);
+  assert.equal(preview.ratings, 1);
+  assert.equal(preview.tagged, 1);
+  assert.equal(preview.filters, true);
+  assert.deepEqual(plain(preview.ids).sort(), ["codeine-coffee", "unknown"]);
+  assert.equal(storage.getItem("jcf:prefs"), before);
+  assert.equal(h.prefs.getRating("unknown"), null);
+  assert.equal(h.sandbox.pending, null);
+  assert.equal(h.warnings.length, 0);
+});
+
+test("export / replace round trip preserves records and ignores portable metadata", () => {
+  const a = setup(memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc({ aroundMe: { enabled: true, radiusKm: 5, updatedAt: T1 } })) }));
+  a.prefs.load();
+  const backup = a.prefs.exportDoc();
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc({ lastExportAt: T3 })) });
+  const b = setup(storage, { now: T2 });
+  b.prefs.load();
+  assert.equal(b.prefs.importDoc(JSON.stringify(backup), "replace").valid, true);
+  const expected = plain(a.prefs.validate(fullDoc({ aroundMe: { enabled: false, radiusKm: 5, updatedAt: T1 } })).doc);
+  expected.lastExportAt = T3;
+  assert.deepEqual(stored(storage), expected);
+});
+
+test("merge imports newer tombstones, keeps local ties and preserves lastExportAt / local mode", () => {
+  const local = fullDoc({ lastExportAt: T1, aroundMe: { enabled: true, radiusKm: 3, updatedAt: T1 } });
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(local) });
+  const { prefs } = setup(storage, { now: T3 });
+  prefs.load();
+  const incoming = fullDoc({ lastExportAt: T3, ratings: {
+    "codeine-coffee": { stars: 1, updatedAt: T1 }, "gone-cafe": { stars: null, updatedAt: T2 },
+    unknown: { stars: 5, updatedAt: T2 },
+  }, tags: { "codeine-coffee": { tags: [], updatedAt: T2 } },
+  aroundMe: { enabled: false, radiusKm: 10, updatedAt: T2 } });
+  assert.equal(prefs.importDoc(JSON.stringify(incoming), "merge").persistent, true);
+  assert.equal(prefs.getRating("codeine-coffee"), 4);
+  assert.equal(prefs.getRating("gone-cafe"), null);
+  assert.equal(prefs.getRating("unknown"), 5);
+  assert.deepEqual(plain(prefs.getTags("codeine-coffee")), []);
+  assert.deepEqual(plain(prefs.getAroundMe()), { enabled: true, radiusKm: 10 });
+  assert.equal(stored(storage).lastExportAt, T1);
+});
+
+test("replace cannot resurrect absent local records on the next edit or reload", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc({ updatedAt: T3 })) });
+  const { prefs } = setup(storage);
+  prefs.load();
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc({ ratings: {}, tags: {} })), "replace").valid, true);
+  assert.deepEqual(stored(storage).ratings, {});
+  prefs.setRating("new", 2);
+  prefs.flush();
+  assert.deepEqual(Object.keys(stored(storage).ratings), ["new"]);
+  const reload = setup(storage).prefs;
+  reload.load();
+  assert.equal(reload.getRating("codeine-coffee"), null);
+  assert.deepEqual(plain(reload.getTags("codeine-coffee")), []);
+});
+
+test("invalid backup headers / sections / modes leave disk and memory unchanged", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage);
+  h.prefs.load();
+  const before = storage.getItem("jcf:prefs");
+  const bad = ["not json", "null", "[]", "1", JSON.stringify({ app: "other", schema: 1 }),
+    JSON.stringify({ app: "jeju-cafe-finder" }), JSON.stringify(fullDoc({ schema: 2 })),
+    JSON.stringify(fullDoc({ schema: 0 })), JSON.stringify(fullDoc({ updatedAt: 2 }))];
+  for (const key of ["ratings", "tags", "filters", "ratingFilter", "aroundMe"]) {
+    for (const value of [null, [], "text", 5]) bad.push(JSON.stringify(fullDoc({ [key]: value })));
+  }
+  for (const text of bad) assert.equal(h.prefs.importDoc(text, "replace").valid, false);
+  assert.equal(h.prefs.importDoc(JSON.stringify(fullDoc()), "bad-mode").valid, false);
+  assert.equal(storage.getItem("jcf:prefs"), before);
+  assert.equal(h.prefs.getRating("codeine-coffee"), 4);
+  assert.equal(h.sandbox.pending, null);
+});
+
+test("backup size is capped in UTF-8 bytes before parsing, including the exact boundary", () => {
+  const { prefs } = setup(memoryStorage());
+  assert.equal(prefs.importDoc("x".repeat(prefs.MAX_IMPORT_BYTES + 1)).error, "tooLarge");
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc({ padding: "한".repeat(180000) }))).error, "tooLarge");
+  const base = JSON.stringify(fullDoc({ padding: "" }));
+  const exact = base.replace('"padding":""', '"padding":"' + "x".repeat(prefs.MAX_IMPORT_BYTES - base.length) + '"');
+  assert.equal(exact.length, prefs.MAX_IMPORT_BYTES);
+  assert.equal(prefs.importDoc(exact).valid, true);
+});
+
+test("invalid records are counted/dropped; reserved IDs never become object prototypes", () => {
+  const h = setup(memoryStorage());
+  h.prefs.load();
+  const doc = fullDoc({
+    ratings: JSON.parse('{"a-cafe":{"stars":4,"updatedAt":"' + T1 + '"},"cleared":{"stars":null,"updatedAt":"' + T1 +
+      '"},"constructor":{"stars":5,"updatedAt":"' + T1 + '"},"prototype":{"stars":5,"updatedAt":"' + T1 +
+      '"},"__proto__":{"stars":5,"updatedAt":"' + T1 + '"},"bad":{"stars":6,"updatedAt":"' + T1 + '"}}'),
+    tags: { "a-cafe": { tags: ['<img src=x onerror="x()">'], updatedAt: T1 },
+      long: { tags: ["x".repeat(31)], updatedAt: T2 }, many: { tags: Array.from({ length: 21 }, (_, i) => "tag" + i), updatedAt: T2 },
+      mixed: { tags: [3], updatedAt: T2 }, blank: { tags: [" "], updatedAt: T2 },
+      constructor: { tags: ["bad"], updatedAt: T2 } },
+  });
+  const preview = h.prefs.importDoc(JSON.stringify(doc));
+  assert.equal(preview.ratings, 1);
+  assert.equal(preview.tagged, 1);
+  assert.equal(preview.skipped, 9);
+  assert.equal(h.prefs.importDoc(JSON.stringify(doc), "replace").valid, true);
+  assert.deepEqual(Object.keys(stored(h.sandbox.localStorage).ratings), ["a-cafe", "cleared"]);
+  assert.equal(h.prefs.getTags("a-cafe")[0], '<img src=x onerror="x()">');
+  assert.equal(h.warnings.length, 0);
+  assert.equal({}.stars, undefined);
+});
+
+test("discarding an invalid tag record never turns it into a newer deletion tombstone", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const { prefs } = setup(storage);
+  prefs.load();
+  const doc = fullDoc({ tags: { "codeine-coffee": { tags: ["x".repeat(31)], updatedAt: T3 } } });
+  assert.equal(prefs.importDoc(JSON.stringify(doc), "merge").skipped, 1);
+  assert.deepEqual(plain(prefs.getTags("codeine-coffee")), ["visited", "Great espresso"]);
+});
+
+test("imports retain unknown IDs but never import enabled / coordinates / lastExportAt", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  const doc = fullDoc({ lastExportAt: T3, userLocation: { lat: 33.456789 }, aroundMe: {
+    enabled: true, lat: 33.456789, lng: 126.654321, radiusKm: 5, updatedAt: T2,
+  } });
+  assert.equal(prefs.importDoc(JSON.stringify(doc), "merge").valid, true);
+  assert.equal(prefs.getRating("gone-cafe"), 2);
+  assert.equal(prefs.getAroundMe().enabled, false);
+  assert.equal(stored(storage).lastExportAt, null);
+  assert.equal(JSON.stringify(stored(storage)).includes("33.456789"), false);
+  assert.equal(JSON.stringify(prefs.exportDoc()).includes('"enabled"'), false);
+});
+
+test("markExported changes only local export metadata, not record/root timestamps", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage, { now: T3 });
+  h.prefs.load();
+  assert.equal(h.prefs.markExported(), true);
+  assert.equal(stored(storage).lastExportAt, T3);
+  assert.equal(stored(storage).updatedAt, T1);
+  assert.equal(stored(storage).ratings["codeine-coffee"].updatedAt, T1);
+  assert.equal("lastExportAt" in h.prefs.exportDoc(), false);
+});
+
+test("newer local schema blocks import/export without overwriting it", () => {
+  const raw = JSON.stringify(fullDoc({ schema: 2 }));
+  const storage = memoryStorage({ "jcf:prefs": raw });
+  const { prefs } = setup(storage);
+  prefs.load();
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc())).valid, true);
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc()), "replace").error, "readOnly");
+  assert.equal(prefs.exportDoc(), null);
+  assert.equal(prefs.markExported(), false);
+  assert.equal(storage.getItem("jcf:prefs"), raw);
+});
+
+test("a newer schema appearing during import restores the original in-memory document", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const { prefs } = setup(storage);
+  prefs.load();
+  const get = storage.getItem;
+  let reads = 0;
+  const newer = JSON.stringify(fullDoc({ schema: 2 }));
+  storage.getItem = (key) => { if (++reads === 2) storage.data.set("jcf:prefs", newer); return get(key); };
+  const result = prefs.importDoc(JSON.stringify(fullDoc({ ratings: {} })), "replace");
+  assert.equal(result.error, "readOnly");
+  assert.equal(prefs.getRating("codeine-coffee"), 4);
+  assert.equal(storage.getItem("jcf:prefs"), newer);
+});
+
+test("valid imports remain usable in memory when storage is blocked", () => {
+  const { prefs } = setup(throwingStorage());
+  prefs.load();
+  const result = prefs.importDoc(JSON.stringify(fullDoc()), "replace");
+  assert.equal(result.valid, true);
+  assert.equal(result.persistent, false);
+  assert.equal(prefs.getRating("codeine-coffee"), 4);
+  assert.equal(prefs.getStatus(), "unavailable");
+  assert.equal(prefs.exportDoc().ratings["gone-cafe"].stars, 2);
+});
+
+test("a failed replace write retries without resurrecting the old disk document", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const { prefs } = setup(storage);
+  prefs.load();
+  const set = storage.setItem;
+  storage.setItem = () => { throw new Error("QuotaExceededError"); };
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc({ ratings: {}, tags: {} })), "replace").persistent, false);
+  storage.setItem = set;
+  prefs.setRating("new", 3);
+  prefs.flush();
+  assert.deepEqual(Object.keys(stored(storage).ratings), ["new"]);
+});
+
+test("delete cancels pending writes, removes only prefs and keeps recovery copies", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()), "jcf:prefs:corrupt-old": "original", unrelated: "keep" });
+  const h = setup(storage);
+  h.prefs.load();
+  h.prefs.setRating("pending", 5);
+  assert.equal(h.prefs.deleteAll().ok, true);
+  assert.equal(h.sandbox.pending, null);
+  h.events.pagehide();
+  assert.equal(storage.getItem("jcf:prefs"), null);
+  assert.equal(storage.getItem("jcf:prefs:corrupt-old"), "original");
+  assert.equal(storage.getItem("unrelated"), "keep");
+  assert.equal(h.prefs.getRating("codeine-coffee"), null);
+  assert.equal(h.prefs.getSummary().lastExportAt, null);
+  assert.deepEqual(plain(h.prefs.getAroundMe()), { enabled: false, radiusKm: null });
+});
+
+test("failed deletion preserves disk/memory and pending user edits", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage);
+  h.prefs.load();
+  h.prefs.setRating("pending", 5);
+  storage.removeItem = () => { throw new Error("blocked"); };
+  assert.equal(h.prefs.deleteAll().ok, false);
+  assert.equal(h.prefs.getRating("pending"), 5);
+  assert.equal(h.prefs.getRating("codeine-coffee"), 4);
+  assert.notEqual(h.sandbox.pending, null);
+});
+
+test("blocked storage still permits an explicitly session-only reset", () => {
+  const { prefs } = setup(throwingStorage());
+  prefs.load();
+  prefs.setRating("memory-only", 4);
+  const result = prefs.deleteAll();
+  assert.equal(result.ok, true);
+  assert.equal(result.persistent, false);
+  assert.equal(prefs.getRating("memory-only"), null);
+});
+
+test("failed recovery removal reports partial failure without touching unrelated keys", () => {
+  const storage = memoryStorage({ "jcf:prefs:corrupt-one": "a", "jcf:prefs:corrupt-two": "b", unrelated: "keep" });
+  const { prefs } = setup(storage);
+  prefs.load();
+  const remove = storage.removeItem;
+  storage.removeItem = (key) => { if (key.endsWith("two")) throw new Error("blocked"); remove(key); };
+  assert.equal(prefs.removeRecoveryCopies(), false);
+  assert.equal(prefs.getSummary().recoveryCount, 1);
+  assert.equal(storage.getItem("unrelated"), "keep");
+});
+
+test("failed corrupt-copy protection rejects import and preserves the original", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  storage.data.set("jcf:prefs", "original broken data");
+  storage.setItem = () => { throw new Error("QuotaExceededError"); };
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc()), "replace").error, "protected");
+  assert.equal(storage.getItem("jcf:prefs"), "original broken data");
+  assert.equal(prefs.getRating("codeine-coffee"), null);
+});
+
+test("cross-tab deletion cancels an old pending write and resets local state", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage);
+  h.prefs.load();
+  h.prefs.setRating("pending", 5);
+  storage.removeItem("jcf:prefs");
+  h.events.storage({ key: "jcf:prefs", newValue: null, storageArea: storage });
+  h.events.pagehide();
+  assert.equal(storage.getItem("jcf:prefs"), null);
+  assert.equal(h.sandbox.pending, null);
+  assert.equal(h.prefs.getRating("pending"), null);
+});
+
+test("a flush racing the delete storage event also cannot resurrect old data", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()) });
+  const h = setup(storage);
+  h.prefs.load();
+  h.prefs.setRating("pending", 5);
+  storage.removeItem("jcf:prefs");
+  assert.equal(h.prefs.flush(), false);
+  assert.equal(storage.getItem("jcf:prefs"), null);
+  assert.equal(h.prefs.getRating("codeine-coffee"), null);
+});
+
+test("recovery copies have a separate deletion API scoped strictly to their prefix", () => {
+  const storage = memoryStorage({ "jcf:prefs": JSON.stringify(fullDoc()), "jcf:prefs:corrupt-one": "a",
+    "jcf:prefs:corrupt-two": "b", "jcf:prefs.other": "keep", unrelated: "keep" });
+  const { prefs } = setup(storage);
+  prefs.load();
+  assert.equal(prefs.getSummary().recoveryCount, 2);
+  assert.equal(prefs.removeRecoveryCopies(), true);
+  assert.equal(prefs.getSummary().recoveryCount, 0);
+  assert.equal(prefs.getRating("codeine-coffee"), 4);
+  assert.equal(storage.getItem("jcf:prefs.other"), "keep");
+  assert.equal(storage.getItem("unrelated"), "keep");
+});
+
+test("import protects a corrupt disk copy before replacing it", () => {
+  const storage = memoryStorage();
+  const { prefs } = setup(storage);
+  prefs.load();
+  storage.data.set("jcf:prefs", "broken original");
+  assert.equal(prefs.importDoc(JSON.stringify(fullDoc()), "replace").valid, true);
+  assert.equal(storage.getItem("jcf:prefs:corrupt-" + T1.replace(/[^0-9]/g, "")), "broken original");
+  assert.equal(prefs.getRating("codeine-coffee"), 4);
+});
 
 test("validate accepts the v1 example with null or ISO lastExportAt", () => {
   const { prefs } = setup(memoryStorage());

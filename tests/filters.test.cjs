@@ -204,7 +204,7 @@ function personalFilterState(settings) {
   vm.runInContext(app.slice(app.indexOf("  var state ="), app.indexOf("  var kindListEl")), scope);
   scope.tableColumns = () => [{ key: "name" }, ...scope.CRITERIA];
   vm.runInContext(app.slice(app.indexOf("  function refreshPersonalFilters("),
-    app.indexOf("  /* ---------------------------------------------------------\n   * Shared markup helpers")), scope);
+    app.indexOf("  /* ---------------------------------------------------------\n   * Personal data backup and restore")), scope);
   return scope;
 }
 
@@ -320,8 +320,9 @@ test("saving a draft preserves removed filter names and their saved order slots"
 });
 
 test("Tab wraps inside the Personalize dialog and Escape uses native cancellation", () => {
-  const controls = [{ focus() { scope.document.activeElement = this; } },
-    { focus() { scope.document.activeElement = this; } }];
+  const controls = [{ getClientRects() { return [{}]; }, focus() { scope.document.activeElement = this; } },
+    { getClientRects() { return [{}]; }, focus() { scope.document.activeElement = this; } },
+    { getClientRects() { return []; }, focus() { throw new Error("Hidden control received focus"); } }];
   let handler;
   const scope = {
     document: { activeElement: controls[0] },

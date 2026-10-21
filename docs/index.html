@@ -16,11 +16,11 @@
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
-<script src="vendor/sql.js/sql-wasm.js?v=20261021-around-me"></script>
+<script src="vendor/sql.js/sql-wasm.js?v=20261021-backup"></script>
 
-<link rel="stylesheet" href="style.css?v=20261021-around-me" />
-<link rel="stylesheet" href="map-type-bar.css?v=20261021-around-me" />
-<link rel="stylesheet" href="prefs-notice.css?v=20261021-around-me" />
+<link rel="stylesheet" href="style.css?v=20261021-backup" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261021-backup" />
+<link rel="stylesheet" href="prefs-notice.css?v=20261021-backup" />
 </head>
 <body>
 
@@ -163,6 +163,44 @@
     <p id="personalizeTagError" class="tag-error" role="alert"></p>
     <p id="personalizeTagStatus" class="sr-only" role="status"></p>
   </section>
+  <section class="personalize-data" aria-labelledby="dataTitle">
+    <h3 id="dataTitle" class="personalize-section-title" data-i18n="data.title">Your data</h3>
+    <p id="dataSummary"></p>
+    <p id="dataLastExport" class="data-hint"></p>
+    <p class="data-hint" data-i18n="data.immediate">Backups use saved settings. Import and deletion apply immediately and discard unsaved filter changes; Cancel won't undo them.</p>
+    <div class="data-actions">
+      <button type="button" class="personalize-button" id="dataExport" data-i18n="data.export">Export file</button>
+      <button type="button" class="personalize-button" id="dataCopy" data-i18n="data.copy">Copy as text</button>
+      <button type="button" class="personalize-button" id="dataImport" data-i18n="data.import">Import…</button>
+      <button type="button" class="personalize-button" id="dataPaste" data-i18n="data.paste">Paste text</button>
+    </div>
+    <input type="file" id="dataImportFile" accept=".json,application/json" hidden>
+    <div id="dataPasteArea" class="data-paste" hidden>
+      <label for="dataText" data-i18n="data.backupText">Backup JSON</label>
+      <textarea id="dataText" rows="6" spellcheck="false" autocapitalize="off" translate="no" aria-describedby="dataError"></textarea>
+      <button type="button" class="personalize-button" id="dataPreviewText" data-i18n="data.previewText">Preview text</button>
+    </div>
+    <div id="dataPreview" class="data-preview" hidden>
+      <p id="dataPreviewSummary" tabindex="-1"></p>
+      <p id="dataUnknown" class="data-hint"></p>
+      <p id="dataSkipped" class="data-hint"></p>
+      <fieldset>
+        <legend data-i18n="data.mode">How to import</legend>
+        <label><input type="radio" name="data-import-mode" value="merge" checked><span data-i18n="data.merge">Merge with my data</span></label>
+        <label><input type="radio" name="data-import-mode" value="replace"><span data-i18n="data.replace">Replace my data</span></label>
+      </fieldset>
+      <p class="data-hint" id="dataReplaceWarning" data-i18n="data.replaceWarning" hidden>Replace removes data not in this backup and turns Around me off. Close other editing tabs first. Your local last-export time is kept.</p>
+      <button type="button" class="personalize-button" id="dataApply" data-i18n="data.apply">Apply import</button>
+    </div>
+    <p id="dataError" class="data-error" role="alert"></p>
+    <p id="dataStatus" class="data-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p id="dataStorage" class="data-hint"></p>
+    <p id="dataSafariWarning" class="data-hint" data-i18n="data.safariWarning" hidden>Safari may delete this data after 7 days without a visit. Export a backup, or add this site to your Home Screen.</p>
+    <div class="data-actions">
+      <button type="button" class="link-btn data-delete" id="dataDelete" data-i18n="data.delete">Delete all my data</button>
+      <button type="button" class="link-btn" id="dataRemoveRecovery" data-i18n="data.removeRecovery" hidden>Remove recovery copies</button>
+    </div>
+  </section>
   </div>
   <div class="personalize-footer">
     <button type="button" class="link-btn" id="personalizeRestore" data-i18n="personalize.restore">Restore defaults</button>
@@ -172,13 +210,13 @@
 </dialog>
 
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261021-around-me"></script>
-<script src="data-config.js?v=20261021-around-me"></script>
-<script src="filters-config.js?v=20261021-around-me"></script>
-<script src="map-pins.js?v=20261021-around-me"></script>
-<script src="db-loader.js?v=20261021-around-me"></script>
-<script src="user-prefs.js?v=20261021-around-me"></script>
-<script src="geo.js?v=20261021-around-me"></script>
-<script src="bootstrap.js?v=20261021-around-me"></script>
+<script src="i18n.js?v=20261021-backup"></script>
+<script src="data-config.js?v=20261021-backup"></script>
+<script src="filters-config.js?v=20261021-backup"></script>
+<script src="map-pins.js?v=20261021-backup"></script>
+<script src="db-loader.js?v=20261021-backup"></script>
+<script src="user-prefs.js?v=20261021-backup"></script>
+<script src="geo.js?v=20261021-backup"></script>
+<script src="bootstrap.js?v=20261021-backup"></script>
 </body>
 </html>

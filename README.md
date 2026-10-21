@@ -73,7 +73,60 @@ appear in the UI; published cafe IDs must not be renamed.
 Visitors can add suggested/custom tags in popups, filter by tags with AND,
 sort by tag count, and rename/delete tags across cafes in Personalize. Tags
 are limited to 30 characters and 20 per cafe and stay in browser storage.
-JSON export/import arrives in a follow-up issue; export is not yet available.
+
+### Backup, import and deletion
+
+Personalize → Your data shows live rating/tag counts, saved filter settings and
+the last export date. Export file requests a JSON download named
+`jeju-cafe-finder-YYYY-MM-DD.json`, using Asia/Seoul for the date. Check that the
+file was actually saved. Copy as text copies the same JSON; if Clipboard or
+downloads are blocked, a selected textarea lets you copy it manually.
+
+Backups use saved settings, not unsaved Personalize filter choices. Import and
+deletion apply immediately and discard that filter draft; Cancel does not undo
+these data actions. Export/copy records a local last-export time after the browser
+accepts the download request or Clipboard write, not proof that a file reached
+disk. Manually copying the fallback textarea cannot be detected and does not
+update this time.
+
+Import accepts a JSON file or pasted text up to 512 KiB in UTF-8. Preview writes
+nothing and reports live ratings, tagged cafes, saved filters, skipped invalid
+records and unique cafe IDs absent from the current dataset. Unknown IDs and
+timestamped deletion tombstones are kept so later merges do not revive deleted
+ratings/tags. Invalid headers, unsupported schemas, top-level section types and
+oversize inputs are rejected without changing personal data. Invalid individual
+records are skipped; a malformed tag record is never turned into a tombstone.
+
+Merge uses newer per-record timestamps; ties keep local values. Replace discards
+records absent from the backup, even when they are newer locally, and turns
+Around me off. Both keep this browser's last-export time. Import never takes
+location consent from a file: Merge keeps the receiving browser's current mode,
+and Replace disables it. Close other editing tabs before Replace; pending
+ordinary edits in another tab use the existing per-record merge behavior.
+
+The schema-1 export is an explicit whitelist: app/schema, updatedAt/exportedAt,
+filters, ratings, tags, ratingFilter and aroundMe radius/timestamp. It never
+contains coordinates, `aroundMe.enabled`, `lastExportAt`, recovery copies or
+unknown fields. Backup files are plain JSON, not encrypted; keep them private.
+No import/export operation uploads personal data.
+
+Delete all my data asks for confirmation, clears `jcf:prefs`, cancels pending
+saves, stops location tracking and resets the UI. Other tabs receive the deletion
+and cancel stale saves, including a flush racing its storage event. Recovery
+copies under `jcf:prefs:corrupt-*` remain until the separate, confirmed Remove
+recovery copies action. Unrelated browser-storage keys are untouched. If storage
+is blocked, the UI explicitly distinguishes session-only changes/deletion from
+verified persistence. A newer stored schema stays protected from overwrite.
+
+The Safari backup advisory uses WebKit capability hints rather than user-agent
+sniffing and is hidden in standalone/Home Screen mode. It is a best-effort hint;
+real Safari and in-app browser checks are still useful.
+
+`UserPrefs.exportDoc()` returns a detached portable object without mutation.
+`importDoc(text)` validates and returns a preview without writing;
+`importDoc(text, "merge" | "replace")` revalidates and explicitly applies it.
+`markExported()` records the local export time separately. Startup still calls
+`UserPrefs.load()` before these APIs.
 
 ### Around me
 

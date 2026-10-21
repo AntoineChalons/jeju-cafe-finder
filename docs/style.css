@@ -929,6 +929,35 @@ a, button, input, [role="button"] {
 .popup-distance { margin: 0.4rem 0; font-size: var(--text-sm); color: var(--color-text-muted); }
 .cell-distance { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+.personalize-data { padding: 0 1.5rem 1rem; border-top: 1px solid var(--color-divider); font-size: var(--text-sm); }
+.personalize-data .personalize-section-title { padding-left: 0; padding-right: 0; }
+.data-hint { margin: 0.4rem 0 0.75rem; color: var(--color-text-muted); font-size: var(--text-xs); }
+.data-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
+.data-actions button, .data-preview button, .data-paste button { min-height: 44px; }
+.data-paste { display: grid; gap: 0.5rem; margin: 1rem 0; min-width: 0; }
+.data-paste textarea {
+  width: 100%; min-width: 0; max-height: 18rem; resize: vertical;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text); padding: 0.5rem;
+  font: var(--text-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.data-paste[hidden], .data-preview[hidden] { display: none; }
+.data-preview { margin: 1rem 0; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.data-preview fieldset { display: grid; gap: 0.4rem; border: 0; padding: 0; margin: 0.75rem 0; min-width: 0; }
+.data-preview legend { font-weight: 600; margin-bottom: 0.4rem; }
+.data-preview label { display: flex; align-items: center; gap: 0.5rem; min-height: 36px; }
+.data-preview input { accent-color: var(--color-primary); flex-shrink: 0; }
+.data-error { color: var(--color-error); margin: 0.5rem 0; overflow-wrap: anywhere; }
+.data-status { margin: 0.5rem 0; overflow-wrap: anywhere; }
+.data-error:empty, .data-status:empty { margin: 0; }
+.data-delete { color: var(--color-error); }
+.personalize-data :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .personalize-data { padding: 0 1rem 1rem; }
+  .data-paste textarea { font-size: 16px; }
+}
+
 /* Personal tags are distinct from the venue's criterion badges. */
 .tag-editor { margin: 0.75rem 0; padding-top: 0.5rem; border-top: 1px solid var(--color-divider); }
 .tag-editor h3 { margin: 0 0 0.4rem; font-size: var(--text-sm); }

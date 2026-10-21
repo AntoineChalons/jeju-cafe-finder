@@ -11,6 +11,7 @@
   var MAX_TAG_LENGTH = typeof TAG_MAX_LENGTH === "number" ? TAG_MAX_LENGTH : 30;
   var MAX_TAGS_PER_CAFE = typeof TAG_MAX_PER_CAFE === "number" ? TAG_MAX_PER_CAFE : 20;
   var MAX_RADIUS_KM = 100;
+  var MAX_IMPORT_BYTES = 512 * 1024;
   var ID_PATTERN = /^[a-z][a-z0-9-]*$/;
   var NAME_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
   var ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
@@ -30,6 +31,8 @@
     attached: false,
     timer: null,
     listeners: [],
+    hasStored: false,
+    replacePending: false,
   };
 
   function warn(message, detail) {
@@ -99,10 +102,14 @@
     return out;
   }
 
-  function cleanNameList(value) {
+  function cleanNameList(value, dropped, name) {
     if (!Array.isArray(value)) return null;
     var out = [];
-    value.forEach(function (item) {
+    value.forEach(function (item, index) {
+      if (typeof item !== "string" || !NAME_PATTERN.test(item)) {
+        if (dropped) dropped.push(name + "." + index);
+        return;
+      }
       if (typeof item === "string" && NAME_PATTERN.test(item) && out.indexOf(item) === -1) out.push(item);
     });
     return out;
@@ -122,10 +129,10 @@
 
   function cleanFilters(value, dropped) {
     if (!isObject(value)) return defaultFilters();
-    var order = cleanNameList(value.order);
-    var hidden = cleanNameList(value.hidden);
-    var shown = cleanNameList(value.shown);
-    var defaultOn = cleanNameList(value.defaultOn);
+    var order = cleanNameList(value.order, dropped, "filters.order");
+    var hidden = cleanNameList(value.hidden, dropped, "filters.hidden");
+    var shown = cleanNameList(value.shown, dropped, "filters.shown");
+    var defaultOn = cleanNameList(value.defaultOn, dropped, "filters.defaultOn");
     var updatedAt = value.updatedAt === null || value.updatedAt === undefined ? null : value.updatedAt;
     if (!order || !hidden || !shown || !defaultOn || (updatedAt !== null && !isIso(updatedAt))) {
       dropped.push("filters");
@@ -172,13 +179,15 @@
     return out;
   }
 
-  function cleanTags(value, dropped) {
+  function cleanTags(value, dropped, strict) {
     var out = Object.create(null);
     if (!isObject(value)) return out;
     Object.keys(value).forEach(function (id) {
       var record = value[id];
       var valid = isValidId(id) && isObject(record) && isIso(record.updatedAt) &&
         Array.isArray(record.tags) && record.tags.every(function (tag) { return typeof tag === "string"; });
+      if (valid && strict) valid = record.tags.length <= MAX_TAGS_PER_CAFE &&
+        record.tags.every(function (tag) { return normalizeTag(tag) !== null; });
       if (!valid) {
         dropped.push("tags." + id);
         return;
@@ -188,7 +197,7 @@
     return out;
   }
 
-  function cleanDoc(doc, dropped) {
+  function cleanDoc(doc, dropped, options) {
     return {
       app: APP_NAME,
       schema: SCHEMA_VERSION,
@@ -196,7 +205,7 @@
       lastExportAt: isIso(doc.lastExportAt) ? doc.lastExportAt : null,
       filters: cleanFilters(doc.filters, dropped),
       ratings: cleanRatings(doc.ratings, dropped),
-      tags: cleanTags(doc.tags, dropped),
+      tags: cleanTags(doc.tags, dropped, options && options.strictTags),
       ratingFilter: cleanRatingFilter(doc.ratingFilter, dropped),
       aroundMe: cleanAroundMe(doc.aroundMe, dropped),
     };
@@ -207,7 +216,7 @@
   }
 
   // Fatal problems make the whole document invalid. Bad individual entries are dropped.
-  function validate(doc) {
+  function validate(doc, options) {
     var errors = [];
     var dropped = [];
     if (!isObject(doc)) {
@@ -220,8 +229,8 @@
       if (doc[name] !== undefined && !isObject(doc[name])) errors.push(name + " must be an object.");
     });
     if (errors.length) return { valid: false, errors: errors, dropped: dropped, doc: null };
-    var clean = cleanDoc(doc, dropped);
-    dropped.forEach(function (entry) { warn("Dropped invalid entry:", entry); });
+    var clean = cleanDoc(doc, dropped, options);
+    if (!options || !options.silent) dropped.forEach(function (entry) { warn("Dropped invalid entry:", entry); });
     return { valid: true, errors: errors, dropped: dropped, doc: clean };
   }
 
@@ -313,8 +322,13 @@
   }
 
   function onStorage(event) {
-    if (!event || event.key !== STORAGE_KEY || typeof event.newValue !== "string" || state.readOnly) return;
+    if (!event || event.key !== STORAGE_KEY) return;
     if (event.storageArea && event.storageArea !== getStorage()) return;
+    if (event.newValue === null) {
+      resetAfterDelete();
+      return;
+    }
+    if (typeof event.newValue !== "string" || state.readOnly) return;
     var result = interpret(event.newValue);
     if (result.status === "newer") {
       state.status = "newer";
@@ -329,6 +343,7 @@
     }
     if (result.status !== "ok") return;
     state.doc = state.timer === null ? result.doc : merge(state.doc, result.doc);
+    state.hasStored = true;
     notify({ source: "storage" });
   }
 
@@ -351,6 +366,8 @@
     var unreadable = !storage;
     state.readOnly = false;
     state.saveFailed = false;
+    state.hasStored = false;
+    state.replacePending = false;
     state.doc = emptyDoc();
     if (storage) {
       try {
@@ -371,6 +388,7 @@
       state.status = result.status;
       if (result.status === "ok") {
         state.doc = result.doc;
+        state.hasStored = true;
       } else if (result.status === "corrupt") {
         setAside(storage, raw);
       } else if (result.status === "newer") {
@@ -406,6 +424,11 @@
       if (!storage) throw new Error("localStorage is not available.");
       // A different tab may have written before its storage event reaches us.
       var raw = storage.getItem(STORAGE_KEY);
+      if (raw === null && state.hasStored) {
+        // Another tab deleted the key before its storage event reached this tab.
+        resetAfterDelete();
+        return false;
+      }
       if (raw !== null) {
         var result = interpret(raw);
         if (result.status === "newer") {
@@ -420,11 +443,13 @@
           state.status = "corrupt";
           notify({ source: "storage" });
           if (state.readOnly) return false;
-        } else {
+        } else if (!state.replacePending) {
           state.doc = merge(state.doc, result.doc);
         }
       }
       storage.setItem(STORAGE_KEY, JSON.stringify(state.doc));
+      state.hasStored = true;
+      state.replacePending = false;
     } catch (error) {
       warn("Cannot save settings:", error);
       if (!state.saveFailed) {
@@ -656,6 +681,199 @@
     return true;
   }
 
+  function exportDoc() {
+    if (state.readOnly) return null;
+    var doc = validate(ensureDoc(), { silent: true }).doc;
+    return {
+      app: APP_NAME, schema: SCHEMA_VERSION, updatedAt: doc.updatedAt, exportedAt: nowFn(),
+      filters: doc.filters, ratings: doc.ratings, tags: doc.tags, ratingFilter: doc.ratingFilter,
+      aroundMe: { radiusKm: doc.aroundMe.radiusKm, updatedAt: doc.aroundMe.updatedAt },
+    };
+  }
+
+  function exportFilename(stamp) {
+    var parts = new Intl.DateTimeFormat("en", {
+      timeZone: "Asia/Seoul", calendar: "gregory", numberingSystem: "latn",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date(stamp || nowFn()));
+    var date = {};
+    parts.forEach(function (part) { date[part.type] = part.value; });
+    return APP_NAME + "-" + date.year + "-" + date.month + "-" + date.day + ".json";
+  }
+
+  function markExported() {
+    if (state.readOnly) return false;
+    ensureDoc().lastExportAt = nowFn();
+    save();
+    var persisted = flush();
+    notify({ source: "export" });
+    return persisted;
+  }
+
+  function utf8Size(text) {
+    var size = 0;
+    for (var i = 0; i < text.length; i += 1) {
+      var code = text.charCodeAt(i);
+      if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length &&
+          text.charCodeAt(i + 1) >= 0xdc00 && text.charCodeAt(i + 1) <= 0xdfff) {
+        size += 4;
+        i += 1;
+      } else size += code < 0x80 ? 1 : code < 0x800 ? 2 : 3;
+      if (size > MAX_IMPORT_BYTES) break;
+    }
+    return size;
+  }
+
+  function counts(doc) {
+    var ids = Object.create(null);
+    Object.keys(doc.ratings).concat(Object.keys(doc.tags)).forEach(function (id) { ids[id] = true; });
+    return {
+      ratings: Object.keys(doc.ratings).filter(function (id) { return doc.ratings[id].stars !== null; }).length,
+      tagged: Object.keys(doc.tags).filter(function (id) { return doc.tags[id].tags.length > 0; }).length,
+      filters: doc.filters.updatedAt !== null || ["order", "hidden", "shown", "defaultOn"].some(function (name) {
+        return doc.filters[name].length > 0;
+      }),
+      ids: Object.keys(ids),
+    };
+  }
+
+  // No mode means preview only. An explicit merge/replace is the separate apply step.
+  function importDoc(text, mode) {
+    function invalid(error) { return { valid: false, error: error }; }
+    if (typeof text !== "string") return invalid("invalid");
+    if (text.length > MAX_IMPORT_BYTES || utf8Size(text) > MAX_IMPORT_BYTES) return invalid("tooLarge");
+    var parsed;
+    try { parsed = JSON.parse(text); } catch (ignored) { return invalid("invalid"); }
+    if (!isObject(parsed) || parsed.app !== APP_NAME || !Number.isInteger(parsed.schema) ||
+        parsed.schema !== SCHEMA_VERSION || (parsed.updatedAt !== undefined && !isIso(parsed.updatedAt))) return invalid("invalid");
+    if (SECTIONS.some(function (name) { return parsed[name] !== undefined && !isObject(parsed[name]); })) return invalid("invalid");
+    var portable = { app: parsed.app, schema: parsed.schema, updatedAt: parsed.updatedAt };
+    SECTIONS.forEach(function (name) { if (parsed[name] !== undefined) portable[name] = parsed[name]; });
+    if (portable.aroundMe) portable.aroundMe = {
+      enabled: false, radiusKm: portable.aroundMe.radiusKm, updatedAt: portable.aroundMe.updatedAt,
+    };
+    var checked = validate(portable, { silent: true, strictTags: true });
+    if (!checked.valid) return invalid("invalid");
+    var incoming = migrate(checked.doc);
+    var result = counts(incoming);
+    result.valid = true;
+    result.skipped = checked.dropped.length;
+    if (mode === undefined) return result;
+    if (mode !== "merge" && mode !== "replace") return invalid("invalid");
+    if (state.readOnly) return invalid(state.status === "newer" ? "readOnly" : "protected");
+    var previous = ensureDoc();
+    var local = previous;
+    var storage = getStorage();
+    var raw = null;
+    if (storage && state.persistent) {
+      try {
+        raw = storage.getItem(STORAGE_KEY);
+        if (raw !== null) {
+          var disk = interpret(raw);
+          if (disk.status === "newer") {
+            state.status = "newer";
+            state.readOnly = true;
+            notify({ source: "storage" });
+            return invalid("readOnly");
+          }
+          if (disk.status === "corrupt") {
+            setAside(storage, raw);
+            if (state.readOnly) {
+              state.status = "corrupt";
+              return invalid("protected");
+            }
+            raw = null;
+          } else if (mode === "merge") local = merge(local, disk.doc);
+        }
+      } catch (ignored) { /* Keep the in-memory import usable if storage is blocked. */ }
+    }
+    var next = mode === "merge" ? merge(local, incoming) : incoming;
+    next.lastExportAt = previous.lastExportAt;
+    next.aroundMe.enabled = mode === "merge" ? previous.aroundMe.enabled : false;
+    if (state.timer !== null) clearTimeout(state.timer);
+    state.timer = null;
+    state.doc = next;
+    state.hasStored = raw !== null;
+    state.replacePending = mode === "replace";
+    state.status = "ok";
+    result.persistent = flush();
+    if (state.readOnly) {
+      state.doc = previous;
+      state.replacePending = false;
+      notify({ source: "storage" });
+      return invalid(state.status === "newer" ? "readOnly" : "protected");
+    }
+    if (state.status === "empty" && !state.hasStored) return invalid("changed");
+    state.saveFailed = !result.persistent;
+    notify({ source: "import" });
+    return result;
+  }
+
+  function recoveryKeys() {
+    var keys = [];
+    try {
+      var storage = getStorage();
+      if (!storage || typeof storage.key !== "function") return keys;
+      for (var i = 0; i < storage.length; i += 1) {
+        var key = storage.key(i);
+        if (typeof key === "string" && key.indexOf(CORRUPT_PREFIX) === 0) keys.push(key);
+      }
+    } catch (ignored) { /* Recovery copies are unavailable when storage is blocked. */ }
+    return keys;
+  }
+
+  function getSummary() {
+    var doc = ensureDoc();
+    var summary = counts(doc);
+    summary.lastExportAt = doc.lastExportAt;
+    summary.recoveryCount = recoveryKeys().length;
+    summary.readOnly = state.readOnly;
+    return summary;
+  }
+
+  function resetAfterDelete(persistent) {
+    if (state.timer !== null) clearTimeout(state.timer);
+    state.timer = null;
+    state.doc = emptyDoc();
+    state.hasStored = false;
+    state.replacePending = false;
+    state.readOnly = false;
+    state.saveFailed = false;
+    if (persistent !== undefined) state.persistent = persistent;
+    state.status = state.persistent ? "empty" : "unavailable";
+    notify({ source: "delete" });
+  }
+
+  function deleteAll() {
+    var storage = getStorage();
+    var pending = state.timer !== null;
+    if (state.timer !== null) clearTimeout(state.timer);
+    state.timer = null;
+    try {
+      if (storage) storage.removeItem(STORAGE_KEY);
+    } catch (ignored) {
+      if (!state.persistent) {
+        resetAfterDelete(false);
+        return { ok: true, persistent: false };
+      }
+      if (pending) save();
+      return { ok: false, persistent: false };
+    }
+    resetAfterDelete(!!storage);
+    return { ok: true, persistent: !!storage };
+  }
+
+  function removeRecoveryCopies() {
+    var storage = getStorage();
+    if (!storage) return false;
+    var ok = true;
+    recoveryKeys().forEach(function (key) {
+      try { storage.removeItem(key); } catch (ignored) { ok = false; }
+    });
+    notify({ source: "recovery" });
+    return ok;
+  }
+
   function onChange(listener) {
     if (typeof listener !== "function") return function () {};
     state.listeners.push(listener);
@@ -669,6 +887,7 @@
     STORAGE_KEY: STORAGE_KEY,
     CORRUPT_PREFIX: CORRUPT_PREFIX,
     SCHEMA_VERSION: SCHEMA_VERSION,
+    MAX_IMPORT_BYTES: MAX_IMPORT_BYTES,
     load: load,
     save: save,
     flush: flush,
@@ -688,6 +907,13 @@
     setRatingFilter: setRatingFilter,
     getAroundMe: getAroundMe,
     setAroundMe: setAroundMe,
+    exportDoc: exportDoc,
+    exportFilename: exportFilename,
+    markExported: markExported,
+    importDoc: importDoc,
+    getSummary: getSummary,
+    deleteAll: deleteAll,
+    removeRecoveryCopies: removeRecoveryCopies,
     onChange: onChange,
     validate: validate,
     migrate: migrate,
