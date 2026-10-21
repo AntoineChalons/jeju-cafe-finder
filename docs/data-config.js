@@ -23,6 +23,11 @@ var SHOW_RECOMMENDATIONS = false;
 var SIZES = ["tiny", "medium", "large"];
 var PRICES = [1, 2, 3];
 
+// Personal tags have stable suggested keys; labels live in i18n.js.
+var SUGGESTED_TAGS = ["visited", "want-to-go", "favourite", "great-coffee", "great-vibe", "quiet"];
+var TAG_MAX_LENGTH = 30;
+var TAG_MAX_PER_CAFE = 20;
+
 // Internal behavior only. Labels, visibility and order live in filters-config.json.
 // `computed: true` criteria are derived from opening hours in app.js.
 var CRITERION_DEFINITIONS = [

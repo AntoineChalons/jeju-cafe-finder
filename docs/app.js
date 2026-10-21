@@ -299,6 +299,7 @@
     criteria: {},
     sizes: {},
     prices: {},
+    tags: Object.create(null),
     ratingFilter: window.UserPrefs ? window.UserPrefs.getRatingFilter() : { minStars: null, includeUnrated: true },
     sort: { key: "name", dir: "asc" },
   };
@@ -310,6 +311,7 @@
 
   function clearFilters(options) {
     state.kind = "All";
+    state.tags = Object.create(null);
     state.criteria = {};
     CRITERIA.forEach(function (criterion) {
       state.criteria[criterion.key] = false;
@@ -368,9 +370,19 @@
 
   function matchesFilters(cafe, ignoreRating) {
     if (!matchesScope(cafe, ignoreRating)) return false;
+    if (!matchesTags(cafe)) return false;
     return selectedCriteriaKeys().every(function (key) {
       return hasCriterion(cafe, key);
     });
+  }
+
+  function myTags(cafe) {
+    return window.UserPrefs ? window.UserPrefs.getTags(cafe.id) : [];
+  }
+
+  function matchesTags(cafe) {
+    var tags = myTags(cafe).map(function (tag) { return tag.toLocaleLowerCase(); });
+    return selectedValues(state.tags).every(function (tag) { return tags.indexOf(tag) !== -1; });
   }
 
   function matchCount(cafe, keys) {
@@ -496,6 +508,7 @@
       return message("prices." + price);
     }, "toggle-price-");
     renderRatingFilters();
+    renderTagFilters();
   }
 
   document.getElementById("resetBtn").title = message("filters.resetHint");
@@ -581,7 +594,10 @@
     filterDraft = makeFilterDraft(window.UserPrefs.getFilterPrefs());
     restoringFilterDefaults = false;
     personalizeStatus.textContent = "";
+    document.getElementById("personalizeTagError").textContent = "";
+    document.getElementById("personalizeTagStatus").textContent = "";
     renderFilterDraft();
+    renderTagManagement();
     personalizeDialog.showModal();
   });
   personalizeDialog.addEventListener("close", function () {
@@ -942,6 +958,7 @@
       '<div class="popup-kr">' + (secondaryName(cafe) ? escapeHtml(secondaryName(cafe)) + " · " : "") + escapeHtml(regionName(cafe.region)) + "</div>" +
       (cafe.size || cafe.price ? '<div class="popup-meta">' + metaPills(cafe) + "</div>" : "") +
       ratingControlHtml(cafe) +
+      tagEditorHtml(cafe) +
       hoursBlockHtml(cafe) +
       contactHtml(cafe) +
       '<p class="popup-blurb">' + escapeHtml(display.blurb) + "</p>" +
@@ -952,6 +969,209 @@
         ? '<span class="popup-source">' + escapeHtml(message("map.source")) + ' <a href="' + safeUrl(cafe.sourceUrl) + '" target="_blank" rel="noopener">' + escapeHtml(message("map.reference")) + "</a></span>"
         : "")
     );
+  }
+
+  /* Personal tags: user text is escaped on every HTML render path. */
+  function suggestedTagLabels() {
+    var labels = Object.create(null);
+    SUGGESTED_TAGS.forEach(function (key) { labels[key] = message("tags.suggested." + key); });
+    return labels;
+  }
+
+  function tagLabel(tag) {
+    return SUGGESTED_TAGS.indexOf(tag) !== -1 ? message("tags.suggested." + tag) : tag;
+  }
+
+  function tagTextHtml(tag) {
+    return '<span' + (SUGGESTED_TAGS.indexOf(tag) === -1 ? ' translate="no"' : "") + ">" +
+      escapeHtml(tagLabel(tag)) + "</span>";
+  }
+
+  function tagEditorHtml(cafe) {
+    if (!window.UserPrefs) return "";
+    var id = escapeHtml(cafe.id);
+    var tags = myTags(cafe);
+    var folded = tags.map(function (tag) { return tag.toLocaleLowerCase(); });
+    var current = tags.map(function (tag) {
+      return '<span class="user-tag">' + tagTextHtml(tag) +
+        '<button type="button" data-tag-cafe="' + id + '" data-tag-remove="' + escapeHtml(tag) +
+        '" aria-label="' + escapeHtml(message("tags.remove", { tag: tagLabel(tag) })) + '">×</button></span>';
+    }).join("");
+    var suggestions = SUGGESTED_TAGS.filter(function (tag) {
+      return folded.indexOf(tag) === -1;
+    }).map(function (tag) {
+      return '<button type="button" class="user-tag tag-suggestion" data-tag-cafe="' + id +
+        '" data-tag-add="' + escapeHtml(tag) + '">+ ' + escapeHtml(tagLabel(tag)) + "</button>";
+    }).join("");
+    var options = window.UserPrefs.allTags().map(function (entry) {
+      return '<option value="' + escapeHtml(tagLabel(entry.tag)) + '"></option>';
+    }).join("");
+    return '<section class="tag-editor" aria-labelledby="tag-title-' + id + '">' +
+      '<h3 id="tag-title-' + id + '">' + escapeHtml(message("tags.title")) + "</h3>" +
+      '<div class="user-tags">' + current + '</div><div class="user-tags tag-suggestions">' + suggestions + "</div>" +
+      '<form class="tag-form" data-tag-cafe="' + id + '">' +
+      '<input type="text" id="tag-input-' + id + '" data-tag-cafe="' + id + '" list="tag-options-' + id +
+        '" aria-label="' + escapeHtml(message("tags.add")) + '" placeholder="' + escapeHtml(message("tags.placeholder")) +
+        '" aria-describedby="tag-error-' + id + '" autocomplete="off">' +
+      '<datalist id="tag-options-' + id + '">' + options + "</datalist>" +
+      '<button type="submit" class="personalize-button" data-tag-cafe="' + id + '" data-tag-add="">' +
+        escapeHtml(message("tags.add")) + "</button></form>" +
+      '<p id="tag-error-' + id + '" class="tag-error" role="alert"></p></section>';
+  }
+
+  function tableTagsHtml(cafe) {
+    var tags = myTags(cafe);
+    return '<div class="user-tags">' + tags.slice(0, 3).map(function (tag) {
+      return '<span class="user-tag">' + tagTextHtml(tag) + "</span>";
+    }).join("") + (tags.length > 3 ? '<span class="tag-overflow">' +
+      escapeHtml(message("tags.more", { count: tags.length - 3 })) + "</span>" : "") + "</div>";
+  }
+
+  function renderTagFilters() {
+    var group = document.getElementById("tagFilterGroup");
+    var list = document.getElementById("tagFilterList");
+    var tags = window.UserPrefs ? window.UserPrefs.allTags() : [];
+    group.hidden = tags.length === 0;
+    list.innerHTML = tags.map(function (entry) {
+      var folded = entry.tag.toLocaleLowerCase();
+      return '<label class="checkbox-item"><input type="checkbox" data-tag-filter="' + escapeHtml(folded) + '"' +
+        (state.tags[folded] ? " checked" : "") + ">" + tagTextHtml(entry.tag) +
+        '<span class="tag-count">(' + entry.count + ")</span></label>";
+    }).join("");
+  }
+
+  function renderTagManagement() {
+    var tags = window.UserPrefs ? window.UserPrefs.allTags() : [];
+    document.getElementById("personalizeTags").innerHTML = tags.length ? tags.map(function (entry, index) {
+      return '<form class="tag-management-row" data-tag-from="' + escapeHtml(entry.tag) + '">' +
+        '<div class="tag-management-label">' + tagTextHtml(entry.tag) +
+        '<span class="tag-count">' + escapeHtml(message("tags.count", { count: entry.count })) + "</span></div>" +
+        '<input type="text" id="tag-rename-' + index + '" value="' + escapeHtml(tagLabel(entry.tag)) +
+        '" aria-label="' + escapeHtml(message("tags.renameLabel", { tag: tagLabel(entry.tag) })) +
+        '" aria-describedby="personalizeTagError" translate="no">' +
+        '<button type="submit" class="personalize-button">' + escapeHtml(message("tags.rename")) + "</button>" +
+        '<button type="button" class="link-btn" data-tag-delete="' + escapeHtml(entry.tag) + '" data-tag-count="' + entry.count + '">' +
+        escapeHtml(message("tags.delete")) + "</button></form>";
+    }).join("") : '<p class="tag-management-hint">' + escapeHtml(message("tags.empty")) + "</p>";
+  }
+
+  function tagInputError(value) {
+    var clean = typeof value === "string" ? value.normalize("NFC").replace(/\s+/g, " ").trim() : "";
+    if (!clean) return message("tags.required");
+    return Array.from(clean).length > TAG_MAX_LENGTH ? message("tags.tooLong") : "";
+  }
+
+  function restoreTagFocus(id) {
+    var input = document.getElementById("tag-input-" + id);
+    var fallback = window.matchMedia("(max-width: 900px)").matches && !sidebar.classList.contains("open")
+      ? sidebarToggle : document.querySelector("#tagFilterList input") || document.getElementById("resetBtn");
+    (input || fallback).focus({ preventScroll: true });
+  }
+
+  function editCafeTag(id, value, remove) {
+    if (!window.UserPrefs || !Object.prototype.hasOwnProperty.call(cafesById, id)) return;
+    var input = document.getElementById("tag-input-" + id);
+    var error = document.getElementById("tag-error-" + id);
+    var text = value || (input ? input.value : "");
+    var problem = remove ? "" : tagInputError(text);
+    var normalized = window.UserPrefs.normalizeTag(text, suggestedTagLabels());
+    if (!normalized && !problem) problem = message("tags.required");
+    var tags = myTags(cafesById[id]);
+    var exists = normalized && tags.some(function (tag) {
+      return tag.toLocaleLowerCase() === normalized.toLocaleLowerCase();
+    });
+    if (!remove && !exists && tags.length >= TAG_MAX_PER_CAFE) problem = message("tags.tooMany");
+    if (problem) {
+      if (error) error.textContent = problem;
+      if (input) input.focus({ preventScroll: true });
+      return;
+    }
+    var next = remove ? tags.filter(function (tag) {
+      return tag.toLocaleLowerCase() !== normalized.toLocaleLowerCase();
+    }) : tags.concat(normalized);
+    window.UserPrefs.setTags(id, next, suggestedTagLabels());
+    window.UserPrefs.flush();
+    // Also refresh a no-op duplicate, clearing the input and any prior error.
+    update({ fit: false });
+    restoreTagFocus(id);
+  }
+
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (form.matches(".tag-form")) {
+      event.preventDefault();
+      editCafeTag(form.getAttribute("data-tag-cafe"), "", false);
+    } else if (form.matches(".tag-management-row")) {
+      event.preventDefault();
+      var from = form.getAttribute("data-tag-from");
+      var value = form.querySelector("input").value;
+      var problem = tagInputError(value);
+      document.getElementById("personalizeTagError").textContent = problem;
+      if (problem) return;
+      var folded = from.toLocaleLowerCase();
+      var renamed = window.UserPrefs.normalizeTag(value, suggestedTagLabels());
+      if (state.tags[folded] && renamed) {
+        delete state.tags[folded];
+        state.tags[renamed.toLocaleLowerCase()] = true;
+      }
+      window.UserPrefs.renameTag(from, value, suggestedTagLabels());
+      window.UserPrefs.flush();
+      document.getElementById("personalizeTagStatus").textContent = message("tags.renamed");
+      var first = document.querySelector("#personalizeTags input");
+      if (first) first.focus();
+    }
+  });
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-tag-add], [data-tag-remove], [data-tag-delete]");
+    if (!button) return;
+    if (button.hasAttribute("data-tag-delete")) {
+      var tag = button.getAttribute("data-tag-delete");
+      if (!window.confirm(message("tags.confirmDelete", {
+        tag: tagLabel(tag), count: button.getAttribute("data-tag-count"),
+      }))) return;
+      window.UserPrefs.deleteTag(tag);
+      window.UserPrefs.flush();
+      document.getElementById("personalizeTagStatus").textContent = message("tags.deleted");
+      document.getElementById("personalizeTagError").textContent = "";
+      var next = document.querySelector("#personalizeTags input") || document.getElementById("personalizeSave");
+      next.focus();
+      return;
+    }
+    event.preventDefault();
+    editCafeTag(button.getAttribute("data-tag-cafe"),
+      button.getAttribute("data-tag-remove") || button.getAttribute("data-tag-add"),
+      button.hasAttribute("data-tag-remove"));
+  });
+
+  var personalTagsSignature = window.UserPrefs
+    ? JSON.stringify([CAFES.map(myTags), window.UserPrefs.allTags()]) : "";
+  function refreshPersonalTags() {
+    var signature = JSON.stringify([CAFES.map(myTags), window.UserPrefs.allTags()]);
+    if (signature === personalTagsSignature) return;
+    personalTagsSignature = signature;
+    var active = document.activeElement;
+    var id = active && active.getAttribute("data-tag-cafe");
+    var value = id && active.tagName === "INPUT" ? active.value : null;
+    var filter = active && active.getAttribute("data-tag-filter");
+    var available = window.UserPrefs.allTags().map(function (entry) { return entry.tag.toLocaleLowerCase(); });
+    Object.keys(state.tags).forEach(function (tag) {
+      if (available.indexOf(tag) === -1) delete state.tags[tag];
+    });
+    renderTagFilters();
+    if (personalizeDialog.open) renderTagManagement();
+    update({ fit: false });
+    if (id) {
+      var input = document.getElementById("tag-input-" + id);
+      if (input && value !== null) input.value = value;
+      restoreTagFocus(id);
+    } else if (filter) {
+      var controls = document.querySelectorAll("#tagFilterList input");
+      var replacement = Array.from(controls).filter(function (control) {
+        return control.getAttribute("data-tag-filter") === filter;
+      })[0];
+      (replacement || document.getElementById("resetBtn")).focus();
+    }
   }
 
   function starHtml(filled) {
@@ -1007,6 +1227,10 @@
     var input = event.target;
     if (input.matches && input.matches("input[data-rating-cafe]") && input.checked) {
       saveCafeRating(input.getAttribute("data-rating-cafe"), Number(input.value));
+    }
+    if (input.matches && input.matches("input[data-tag-filter]")) {
+      state.tags[input.getAttribute("data-tag-filter")] = input.checked;
+      update();
     }
   });
   document.addEventListener("click", function (event) {
@@ -1196,6 +1420,7 @@
       { key: "price", label: message("table.price") },
       { key: "today", label: message("table.today") },
       { key: "myRating", label: message("table.myRating") },
+      { key: "myTags", label: message("table.myTags") },
     ].concat(
       CRITERIA.map(function (criterion) {
         return { key: criterion.key, label: criterionLabel(criterion), title: criterionLabel(criterion), noTranslate: true };
@@ -1246,7 +1471,7 @@
       state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc";
     } else {
       state.sort.key = key;
-      state.sort.dir = key === "myRating" || key === "match" || COMPUTED_KEYS[key] || !!CRITERIA.filter(function (c) { return c.key === key; }).length ? "desc" : "asc";
+      state.sort.dir = key === "myRating" || key === "myTags" || key === "match" || COMPUTED_KEYS[key] || !!CRITERIA.filter(function (c) { return c.key === key; }).length ? "desc" : "asc";
     }
     update({ fit: false });
   }
@@ -1256,6 +1481,7 @@
 
   function sortValue(cafe, key, comparedKeys) {
     if (key === "myRating") return myRating(cafe);
+    if (key === "myTags") return myTags(cafe).length;
     if (key === "match") return matchCount(cafe, comparedKeys);
     if (key === "name") return cafeText(cafe).name.toLocaleLowerCase("en");
     if (key === "region") return regionLabel(cafe.region);
@@ -1315,7 +1541,8 @@
         "<td>" + (cafe.size ? escapeHtml(sizeLabel(cafe.size)) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
         '<td class="cell-price">' + (cafe.price ? priceSymbol(cafe.price) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
         '<td><div class="cell-today">' + statusBadge(status) + "<small>" + escapeHtml(cafe.hasHours ? todayHoursText(cafe) : "") + "</small></div></td>" +
-        "<td>" + tableRatingHtml(cafe) + "</td>";
+        "<td>" + tableRatingHtml(cafe) + "</td>" +
+        '<td class="cell-user-tags">' + tableTagsHtml(cafe) + "</td>";
 
       CRITERIA.forEach(function (criterion) {
         cells += hasCriterion(cafe, criterion.key)
@@ -1465,4 +1692,5 @@
   update();
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalFilters);
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalRatings);
+  if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalTags);
 })();

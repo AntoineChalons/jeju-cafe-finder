@@ -209,7 +209,7 @@ test("normalizeTag cleans text and maps suggested labels to their key", () => {
   assert.equal(prefs.normalizeTag("  Great \n  espresso\t"), "Great espresso");
   assert.equal(prefs.normalizeTag("   "), null);
   assert.equal(prefs.normalizeTag(7), null);
-  assert.equal(prefs.normalizeTag("x".repeat(100)).length, 40);
+  assert.equal(prefs.normalizeTag("x".repeat(100)), null);
   const labels = { visited: "Visited", wantToGo: "Want to go" };
   assert.equal(prefs.normalizeTag("visited", labels), "visited");
   assert.equal(prefs.normalizeTag(" want TO go ", labels), "wantToGo");

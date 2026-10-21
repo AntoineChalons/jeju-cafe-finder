@@ -212,11 +212,14 @@ a, button, input, [role="button"] {
 }
 .personalize-dialog[open] { display: flex; flex-direction: column; }
 .personalize-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.personalize-body { overflow-y: auto; min-height: 0; flex: 1; }
 .personalize-heading { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
 .personalize-heading h2 { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: 0.4rem; }
 .personalize-heading p { font-size: var(--text-sm); color: var(--color-text-muted); }
 .personalize-section-title { padding: 0.75rem 1.5rem 0; font-size: var(--text-base); flex-shrink: 0; }
-.personalize-list { padding: 0 1.5rem; margin: 0; list-style: none; overflow-y: auto; min-height: 0; }
+.personalize-list { padding: 0 1.5rem; margin: 0; list-style: none; }
+.personalize-tags { padding: 0 1.5rem 1rem; }
+.personalize-tags .personalize-section-title { padding-left: 0; padding-right: 0; }
 .personalize-row { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--color-border); }
 .personalize-name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 .personalize-options { display: flex; flex-wrap: wrap; gap: 0 1rem; grid-column: 1; }
@@ -236,7 +239,8 @@ a, button, input, [role="button"] {
   .personalize-dialog { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; }
   .personalize-heading { padding: 1rem; }
   .personalize-section-title { padding: 0.75rem 1rem 0; }
-  .personalize-list { padding: 0 1rem; flex: 1; }
+  .personalize-list { padding: 0 1rem; }
+  .personalize-tags { padding: 0 1rem 1rem; }
   .personalize-row { gap: 0.3rem 0.5rem; }
   .personalize-moves { flex-direction: column; }
   .personalize-footer { padding: 0.75rem 1rem; }
@@ -892,3 +896,50 @@ a, button, input, [role="button"] {
   pointer-events: none;
 }
 .social-btn[data-copy].is-copied::after { right: auto; left: 50%; transform: translateX(-50%); }
+
+/* Personal tags are distinct from the venue's criterion badges. */
+.tag-editor { margin: 0.75rem 0; padding-top: 0.5rem; border-top: 1px solid var(--color-divider); }
+.tag-editor h3 { margin: 0 0 0.4rem; font-size: var(--text-sm); }
+.user-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; min-width: 0; }
+.user-tag {
+  display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  padding: 0.2rem 0.4rem; background: var(--color-surface-2); color: var(--color-text);
+  font-size: var(--text-xs); overflow-wrap: anywhere; white-space: normal;
+}
+.user-tag > span { min-width: 0; }
+.user-tag button {
+  flex-shrink: 0; min-width: 28px; min-height: 28px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-text); cursor: pointer; font-size: var(--text-sm);
+}
+.tag-suggestions { margin: 0.5rem 0; }
+.tag-suggestion { cursor: pointer; min-height: 32px; }
+.tag-suggestion:hover, .user-tag button:hover { background: var(--color-primary-highlight); }
+.tag-form { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tag-form input, .tag-management-row input {
+  min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text); padding: 0.4rem 0.5rem;
+  font: inherit; font-size: var(--text-sm);
+}
+.tag-form input { flex: 1 1 120px; width: 120px; }
+.tag-form button { flex-shrink: 0; }
+.tag-error { color: var(--color-error); font-size: var(--text-xs); margin: 0.4rem 0 0; }
+.tag-error:empty { margin: 0; }
+.tag-filter-list { display: grid; gap: 0.35rem; }
+.tag-filter-list .checkbox-item { min-width: 0; overflow-wrap: anywhere; }
+.tag-count, .tag-overflow { color: var(--color-text-muted); font-size: var(--text-xs); }
+.tag-count { margin-left: 0.3rem; }
+.cell-user-tags { min-width: 140px; max-width: 210px; }
+.cell-user-tags .user-tag { max-width: 160px; }
+.cell-user-tags .user-tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-management-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin: 0.4rem 0 0.75rem; }
+.tag-management-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  padding: 0.65rem 0; border-bottom: 1px solid var(--color-divider);
+}
+.tag-management-label { width: 100%; overflow-wrap: anywhere; font-size: var(--text-sm); }
+.tag-management-row input { flex: 1 1 100px; width: 100px; }
+.tag-management-row button { flex-shrink: 0; }
+.tag-editor :focus-visible, #personalizeTags :focus-visible {
+  outline: 2px solid var(--color-primary); outline-offset: 2px;
+}
