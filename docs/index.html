@@ -16,11 +16,11 @@
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
-<script src="vendor/sql.js/sql-wasm.js?v=20261020-ratings"></script>
+<script src="vendor/sql.js/sql-wasm.js?v=20261021-tags"></script>
 
-<link rel="stylesheet" href="style.css?v=20261020-ratings" />
-<link rel="stylesheet" href="map-type-bar.css?v=20261020-ratings" />
-<link rel="stylesheet" href="prefs-notice.css?v=20261020-ratings" />
+<link rel="stylesheet" href="style.css?v=20261021-tags" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261021-tags" />
+<link rel="stylesheet" href="prefs-notice.css?v=20261021-tags" />
 </head>
 <body>
 
@@ -68,6 +68,11 @@
         <h2 class="filter-title" id="ratingFilterHeading" data-i18n="rating.filter">My rating</h2>
         <div class="radio-row rating-filter" id="ratingFilterList" role="radiogroup" aria-labelledby="ratingFilterHeading"></div>
         <label class="checkbox-item rating-include"><input type="checkbox" id="includeUnrated" checked disabled><span data-i18n="rating.includeUnrated">Include unrated places</span></label>
+      </section>
+
+      <section class="filter-group" id="tagFilterGroup" aria-labelledby="tagFilterHeading" hidden>
+        <h2 class="filter-title" id="tagFilterHeading" data-i18n="tags.filter">My tags</h2>
+        <div id="tagFilterList" class="tag-filter-list"></div>
       </section>
 
       <section class="filter-group results-summary" id="resultsSummary" data-testid="text-results-summary" aria-live="polite"></section>
@@ -139,9 +144,18 @@
     <h2 id="personalizeTitle" data-i18n="personalize.title">Personalize</h2>
     <p id="personalizeDescription" data-i18n="personalize.description">Choose which filters to show, their order, and which start switched on. Changes stay in this browser.</p>
   </div>
+  <div class="personalize-body">
   <h3 id="personalizeFiltersHeading" class="personalize-section-title" data-i18n="personalize.filters">Filters</h3>
   <ol id="personalizeList" class="personalize-list" aria-labelledby="personalizeFiltersHeading"></ol>
   <p id="personalizeStatus" class="sr-only" role="status"></p>
+  <section class="personalize-tags" aria-labelledby="personalizeTagsHeading">
+    <h3 id="personalizeTagsHeading" class="personalize-section-title" data-i18n="tags.manage">Tags</h3>
+    <p class="tag-management-hint" data-i18n="tags.immediate">Tag changes are saved immediately, independently of the filter settings above.</p>
+    <div id="personalizeTags"></div>
+    <p id="personalizeTagError" class="tag-error" role="alert"></p>
+    <p id="personalizeTagStatus" class="sr-only" role="status"></p>
+  </section>
+  </div>
   <div class="personalize-footer">
     <button type="button" class="link-btn" id="personalizeRestore" data-i18n="personalize.restore">Restore defaults</button>
     <button type="button" class="personalize-button" id="personalizeCancel" data-i18n="personalize.cancel">Cancel</button>
@@ -150,12 +164,12 @@
 </dialog>
 
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261020-ratings"></script>
-<script src="data-config.js?v=20261020-ratings"></script>
-<script src="filters-config.js?v=20261020-ratings"></script>
-<script src="map-pins.js?v=20261020-ratings"></script>
-<script src="db-loader.js?v=20261020-ratings"></script>
-<script src="user-prefs.js?v=20261020-ratings"></script>
-<script src="bootstrap.js?v=20261020-ratings"></script>
+<script src="i18n.js?v=20261021-tags"></script>
+<script src="data-config.js?v=20261021-tags"></script>
+<script src="filters-config.js?v=20261021-tags"></script>
+<script src="map-pins.js?v=20261021-tags"></script>
+<script src="db-loader.js?v=20261021-tags"></script>
+<script src="user-prefs.js?v=20261021-tags"></script>
+<script src="bootstrap.js?v=20261021-tags"></script>
 </body>
 </html>
