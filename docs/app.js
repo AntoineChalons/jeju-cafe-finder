@@ -299,6 +299,9 @@
     criteria: {},
     sizes: {},
     prices: {},
+    userLocation: null,
+    distances: Object.create(null),
+    aroundMe: window.UserPrefs ? window.UserPrefs.getAroundMe() : { enabled: false, radiusKm: null },
     ratingFilter: window.UserPrefs ? window.UserPrefs.getRatingFilter() : { minStars: null, includeUnrated: true },
     sort: { key: "name", dir: "asc" },
   };
@@ -317,6 +320,13 @@
     SIZES.forEach(function (size) { state.sizes[size] = false; });
     PRICES.forEach(function (price) { state.prices[price] = false; });
     if (!options || !options.keepRating) {
+      if (state.aroundMe.radiusKm !== null) {
+        state.aroundMe.radiusKm = null;
+        if (window.UserPrefs) {
+          window.UserPrefs.setAroundMe(state.aroundMe);
+          window.UserPrefs.flush();
+        }
+      }
       var changed = state.ratingFilter.minStars !== null || !state.ratingFilter.includeUnrated;
       state.ratingFilter = { minStars: null, includeUnrated: true };
       if (changed && window.UserPrefs) {
@@ -361,6 +371,8 @@
     if (sizes.length && sizes.indexOf(cafe.size) === -1) return false;
     var prices = selectedValues(state.prices);
     if (prices.length && prices.indexOf(String(cafe.price)) === -1) return false;
+    if (state.userLocation && CafeGeo.isInsideJeju(state.userLocation) &&
+        state.aroundMe.radiusKm !== null && state.distances[cafe.id] > state.aroundMe.radiusKm) return false;
     // Array.filter supplies a numeric index as the second argument.
     return ignoreRating === true || !window.UserPrefs ||
       window.UserPrefs.passesRatingFilter(myRating(cafe), state.ratingFilter);
@@ -496,6 +508,7 @@
       return message("prices." + price);
     }, "toggle-price-");
     renderRatingFilters();
+    renderDistanceFilter();
   }
 
   document.getElementById("resetBtn").title = message("filters.resetHint");
@@ -803,6 +816,254 @@
   var cafesById = {};
   CAFES.forEach(function (cafe) { cafesById[cafe.id] = cafe; });
 
+  /* A separate user marker never enters the cafe marker/label collection. */
+  var aroundMeActive = false;
+  var positionWatch = null;
+  var positionGeneration = 0;
+  var userMarker = null;
+  var locationButton = null;
+  var distanceOrigin = null;
+  var pendingLocationFit = false;
+  var nearOverride = CafeGeo.parseNearOverride(window.location.search);
+  var locationStatus = "";
+
+  function supportsLocation() {
+    return nearOverride !== null || !!(navigator.geolocation &&
+      typeof navigator.geolocation.watchPosition === "function" &&
+      typeof navigator.geolocation.clearWatch === "function");
+  }
+
+  function saveAroundMe() {
+    if (!window.UserPrefs) return;
+    window.UserPrefs.setAroundMe(state.aroundMe);
+    window.UserPrefs.flush();
+  }
+
+  function renderLocationState() {
+    if (locationButton) {
+      var label = message(aroundMeActive ? "aroundMe.stop" : "aroundMe.button");
+      locationButton.setAttribute("aria-label", label);
+      locationButton.setAttribute("title", label);
+      locationButton.setAttribute("aria-pressed", String(aroundMeActive));
+      locationButton.innerHTML = '<i data-lucide="' + (aroundMeActive ? "locate-fixed" : "locate") + '" aria-hidden="true"></i>';
+      if (window.lucide) lucide.createIcons();
+    }
+    document.getElementById("aroundMeStatus").textContent = locationStatus ? message(locationStatus) : "";
+  }
+
+  function renderDistanceFilter() {
+    var available = !!state.userLocation && CafeGeo.isInsideJeju(state.userLocation);
+    var container = document.getElementById("distanceFilterList");
+    container.innerHTML = [null].concat(AROUND_ME_RADII_KM).map(function (radius) {
+      var value = radius === null ? "any" : String(radius);
+      return '<label class="radio-chip"><input type="radio" name="distance-filter" value="' + value +
+        '" data-testid="radio-distance-' + value + '"' +
+        (state.aroundMe.radiusKm === radius ? " checked" : "") + (!available ? " disabled" : "") +
+        '><span>' + escapeHtml(message(radius === null ? "aroundMe.any" : "aroundMe.radiusKm", { n: radius })) + "</span></label>";
+    }).join("");
+    document.getElementById("distanceHint").textContent = available ? "" :
+      message(!supportsLocation() ? "aroundMe.unavailable" :
+        state.userLocation ? "aroundMe.outside" : "aroundMe.needsLocation");
+  }
+
+  document.getElementById("distanceFilterList").addEventListener("change", function (event) {
+    var input = event.target;
+    if (!input.matches("input") || !state.userLocation || !CafeGeo.isInsideJeju(state.userLocation)) return;
+    var radius = input.value === "any" ? null : Number(input.value);
+    if (radius !== null && AROUND_ME_RADII_KM.indexOf(radius) === -1) return;
+    state.aroundMe.radiusKm = radius;
+    saveAroundMe();
+    update();
+  });
+
+  function clearPositionWatch() {
+    positionGeneration += 1;
+    if (positionWatch !== null) {
+      navigator.geolocation.clearWatch(positionWatch);
+      positionWatch = null;
+    }
+  }
+
+  function stopAroundMe(status, persist) {
+    clearPositionWatch();
+    aroundMeActive = false;
+    pendingLocationFit = false;
+    state.aroundMe.enabled = false;
+    state.userLocation = null;
+    state.distances = Object.create(null);
+    distanceOrigin = null;
+    if (userMarker) userMarker.remove();
+    userMarker = null;
+    if (state.sort.key === "distance") state.sort = { key: "name", dir: "asc" };
+    locationStatus = status || "";
+    if (persist !== false) saveAroundMe();
+    renderLocationState();
+    renderDistanceFilter();
+    renderTableHeader();
+    update({ fit: false });
+  }
+
+  function fitUserNearby() {
+    if (!state.userLocation || !CafeGeo.isInsideJeju(state.userLocation)) return;
+    if (!mapReady) {
+      pendingLocationFit = true;
+      return;
+    }
+    pendingLocationFit = false;
+    var bounds = new maplibregl.LngLatBounds();
+    bounds.extend([state.userLocation.lng, state.userLocation.lat]);
+    CAFES.filter(matchesFilters).sort(function (a, b) {
+      return state.distances[a.id] - state.distances[b.id];
+    }).slice(0, 5).forEach(function (cafe) { bounds.extend([cafe.lng, cafe.lat]); });
+    map.fitBounds(bounds, { padding: 56, duration: 500, maxZoom: 12.5 });
+  }
+
+  function receiveLocation(position) {
+    var coords = position && position.coords;
+    var point = coords && { lat: coords.latitude, lng: coords.longitude };
+    if (!point || !Number.isFinite(CafeGeo.distanceKm(point, point))) {
+      stopAroundMe("aroundMe.unavailable");
+      return;
+    }
+    var first = state.userLocation === null;
+    var changedArea = !distanceOrigin || CafeGeo.isInsideJeju(point) !== CafeGeo.isInsideJeju(distanceOrigin);
+    state.userLocation = point;
+    if (!userMarker) {
+      var element = document.createElement("div");
+      element.className = "user-location-marker";
+      element.setAttribute("role", "img");
+      element.setAttribute("data-testid", "marker-user-location");
+      userMarker = new maplibregl.Marker({ element: element }).setLngLat([point.lng, point.lat]).addTo(map);
+    } else {
+      userMarker.setLngLat([point.lng, point.lat]);
+    }
+    var accuracy = Number.isFinite(coords.accuracy) && coords.accuracy >= 0 ? Math.round(coords.accuracy) : null;
+    userMarker.getElement().setAttribute("aria-label", message(accuracy === null ? "aroundMe.youUnknown" : "aroundMe.you", { accuracy: accuracy }));
+    locationStatus = CafeGeo.isInsideJeju(point) ? "" : "aroundMe.outside";
+    if (locationStatus) pendingLocationFit = false;
+    renderLocationState();
+    if (!first && !changedArea && CafeGeo.distanceKm(distanceOrigin, point) <= 0.05) return;
+    distanceOrigin = point;
+    state.distances = Object.create(null);
+    CAFES.forEach(function (cafe) { state.distances[cafe.id] = CafeGeo.distanceKm(point, cafe); });
+    if (first) {
+      state.sort = { key: "distance", dir: "asc" };
+      renderTableHeader();
+    }
+    renderDistanceFilter();
+    update({ fit: false });
+    if (first) fitUserNearby();
+  }
+
+  function beginLocationWatch() {
+    if (!aroundMeActive || document.hidden || positionWatch !== null) return;
+    var generation = ++positionGeneration;
+    function fix(position) {
+      if (generation === positionGeneration && aroundMeActive && !document.hidden) receiveLocation(position);
+    }
+    function error(reason) {
+      if (generation !== positionGeneration || !aroundMeActive || document.hidden) return;
+      stopAroundMe(reason && reason.code === 1 ? "aroundMe.denied" : "aroundMe.unavailable");
+    }
+    if (nearOverride !== null) {
+      if (typeof nearOverride === "string") error({ code: nearOverride === "denied" ? 1 : 2 });
+      else fix({ coords: { latitude: nearOverride.lat, longitude: nearOverride.lng, accuracy: 0 } });
+      return;
+    }
+    try {
+      var watch = navigator.geolocation.watchPosition(fix, error, {
+        enableHighAccuracy: true, maximumAge: 60000, timeout: 15000,
+      });
+      if (generation === positionGeneration && aroundMeActive && !document.hidden) positionWatch = watch;
+      else navigator.geolocation.clearWatch(watch);
+    } catch (ignored) {
+      error({ code: 2 });
+    }
+  }
+
+  function startAroundMe() {
+    if (aroundMeActive || !supportsLocation()) return;
+    aroundMeActive = true;
+    state.aroundMe.enabled = true;
+    locationStatus = "aroundMe.locating";
+    saveAroundMe();
+    renderLocationState();
+    beginLocationWatch();
+  }
+
+  function autoStartAroundMe() {
+    if (!state.aroundMe.enabled || aroundMeActive || !supportsLocation()) return;
+    if (nearOverride !== null) {
+      startAroundMe();
+      return;
+    }
+    if (!navigator.permissions || typeof navigator.permissions.query !== "function") return;
+    var generation = positionGeneration;
+    try {
+      navigator.permissions.query({ name: "geolocation" }).then(function (permission) {
+        if (permission.state === "granted" && generation === positionGeneration && state.aroundMe.enabled) startAroundMe();
+      }).catch(function () { /* Without a reliable permission check, wait for a click. */ });
+    } catch (ignored) { /* Some browsers do not support this permission name. */ }
+  }
+
+  function initializeAroundMe() {
+    if (state.aroundMe.radiusKm !== null && AROUND_ME_RADII_KM.indexOf(state.aroundMe.radiusKm) === -1) {
+      state.aroundMe.radiusKm = null;
+    }
+    if (supportsLocation()) map.addControl({
+      onAdd: function () {
+        var control = document.createElement("div");
+        control.className = "maplibregl-ctrl maplibregl-ctrl-group around-me-control";
+        locationButton = document.createElement("button");
+        locationButton.type = "button";
+        locationButton.className = "around-me-button";
+        locationButton.setAttribute("data-testid", "button-around-me");
+        locationButton.setAttribute("aria-controls", "distanceFilterList");
+        locationButton.addEventListener("click", function () {
+          if (aroundMeActive) stopAroundMe();
+          else startAroundMe();
+        });
+        control.appendChild(locationButton);
+        return control;
+      },
+      onRemove: function () {
+        clearPositionWatch();
+        if (userMarker) userMarker.remove();
+        userMarker = null;
+        aroundMeActive = false;
+        if (locationButton) locationButton.parentNode.remove();
+        locationButton = null;
+      },
+    }, "top-right");
+    else locationStatus = "aroundMe.unavailable";
+    renderLocationState();
+    renderDistanceFilter();
+    autoStartAroundMe();
+  }
+
+  function resumeLocationWatch() {
+    if (aroundMeActive) beginLocationWatch();
+    else autoStartAroundMe();
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) clearPositionWatch();
+    else resumeLocationWatch();
+  });
+  window.addEventListener("pagehide", clearPositionWatch);
+  window.addEventListener("pageshow", resumeLocationWatch);
+  if (window.UserPrefs) window.UserPrefs.onChange(function (change) {
+    if (!change || change.source !== "storage") return;
+    var next = window.UserPrefs.getAroundMe();
+    state.aroundMe = { enabled: next.enabled, radiusKm: AROUND_ME_RADII_KM.indexOf(next.radiusKm) === -1 ? null : next.radiusKm };
+    if (!next.enabled && aroundMeActive) stopAroundMe("", false);
+    else {
+      renderDistanceFilter();
+      update({ fit: false });
+      autoStartAroundMe();
+    }
+  });
+
   var labelLayoutFrame = null;
 
   function canShowMapLabels() {
@@ -940,6 +1201,9 @@
       '<a class="popup-title" href="' + naver + '" target="_blank" rel="noopener">' +
       escapeHtml(display.name) + EXTERNAL_SVG + "</a>" +
       '<div class="popup-kr">' + (secondaryName(cafe) ? escapeHtml(secondaryName(cafe)) + " · " : "") + escapeHtml(regionName(cafe.region)) + "</div>" +
+      (state.userLocation ? '<p class="popup-distance">' + escapeHtml(message("aroundMe.fromYou", {
+        distance: CafeGeo.formatDistance(state.distances[cafe.id], "en"),
+      })) + "</p>" : "") +
       (cafe.size || cafe.price ? '<div class="popup-meta">' + metaPills(cafe) + "</div>" : "") +
       ratingControlHtml(cafe) +
       hoursBlockHtml(cafe) +
@@ -1179,7 +1443,8 @@
   map.on("load", function () {
     createMarkers();
     mapReady = true;
-    updateMapMarkers(CAFES.filter(matchesFilters), true);
+    updateMapMarkers(CAFES.filter(matchesFilters), !state.userLocation);
+    if (pendingLocationFit) fitUserNearby();
   });
 
   /* ---------------------------------------------------------
@@ -1196,7 +1461,7 @@
       { key: "price", label: message("table.price") },
       { key: "today", label: message("table.today") },
       { key: "myRating", label: message("table.myRating") },
-    ].concat(
+    ].concat(state.userLocation ? [{ key: "distance", label: message("table.distance") }] : []).concat(
       CRITERIA.map(function (criterion) {
         return { key: criterion.key, label: criterionLabel(criterion), title: criterionLabel(criterion), noTranslate: true };
       })
@@ -1255,6 +1520,7 @@
   var SIZE_ORDER = { tiny: 0, medium: 1, large: 2 };
 
   function sortValue(cafe, key, comparedKeys) {
+    if (key === "distance") return state.distances[cafe.id];
     if (key === "myRating") return myRating(cafe);
     if (key === "match") return matchCount(cafe, comparedKeys);
     if (key === "name") return cafeText(cafe).name.toLocaleLowerCase("en");
@@ -1316,6 +1582,8 @@
         '<td class="cell-price">' + (cafe.price ? priceSymbol(cafe.price) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
         '<td><div class="cell-today">' + statusBadge(status) + "<small>" + escapeHtml(cafe.hasHours ? todayHoursText(cafe) : "") + "</small></div></td>" +
         "<td>" + tableRatingHtml(cafe) + "</td>";
+      if (state.userLocation) cells += '<td class="cell-distance">' +
+        escapeHtml(CafeGeo.formatDistance(state.distances[cafe.id], "en")) + "</td>";
 
       CRITERIA.forEach(function (criterion) {
         cells += hasCriterion(cafe, criterion.key)
@@ -1465,4 +1733,5 @@
   update();
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalFilters);
   if (window.UserPrefs) window.UserPrefs.onChange(refreshPersonalRatings);
+  initializeAroundMe();
 })();

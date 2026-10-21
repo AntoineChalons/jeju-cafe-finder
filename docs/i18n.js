@@ -48,6 +48,18 @@ var APP_TRANSLATIONS = {
       includeUnrated: "Include unrated places",
       label: "Your rating: {n} of 5", score: "{n}/5", edit: "Edit your rating for {name}",
     },
+    aroundMe: {
+      button: "Around me", stop: "Stop using my location",
+      locating: "Finding your location…",
+      denied: "Location access is off. You can turn it on in your browser's site settings.",
+      unavailable: "Your location isn't available right now.",
+      outside: "You seem to be outside Jeju. Distances are shown, but the map stays on the island.",
+      you: "Your location (±{accuracy} m)", fromYou: "{distance} from you",
+      youUnknown: "Your location",
+      radius: "Distance", any: "Any", radiusKm: "{n} km",
+      needsLocation: 'Turn on "Around me" to filter by distance.',
+      privacy: "Your location stays on this device.",
+    },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
       kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
@@ -114,6 +126,7 @@ var APP_TRANSLATIONS = {
       noData: "No cafes have been added yet.",
       cafe: "Cafe", area: "Area", size: "Size", price: "Price", today: "Today", match: "Match",
       myRating: "My rating",
+      distance: "Distance",
       unknown: "—",
     },
     contact: {
