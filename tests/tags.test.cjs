@@ -211,6 +211,6 @@ test("sidebar counts and visibility follow stored tags; all asset revisions matc
   assert.ok(node("tagFilterList").innerHTML.includes("(2)"));
   const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
   const versions = [...html.matchAll(/\?v=([^"]+)/g)].map((match) => match[1]);
-  assert.deepEqual([...new Set(versions)], ["20261021-tags"]);
+  assert.deepEqual([...new Set(versions)], ["20261021-around-me"]);
   assert.ok(html.includes('role="alert"'));
 });

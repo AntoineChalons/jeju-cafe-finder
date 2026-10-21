@@ -70,10 +70,39 @@ the displayed stars but keeps a timestamped null entry (a tombstone) for cross-t
 merging. Ratings for IDs absent from the published data stay stored but never
 appear in the UI; published cafe IDs must not be renamed.
 
-`window.UserPrefs` also provides storage for tags and the around-me mode/radius.
-Their feature controls and JSON export/import
-will arrive in the follow-up personalization issues. Export is not available
-in this release.
+Visitors can add suggested/custom tags in popups, filter by tags with AND,
+sort by tag count, and rename/delete tags across cafes in Personalize. Tags
+are limited to 30 characters and 20 per cafe and stay in browser storage.
+JSON export/import arrives in a follow-up issue; export is not yet available.
+
+### Around me
+
+Click the map's Around me control to request browser location access. A ringed
+dot marks your position, the table sorts by straight-line distance, and the
+Distance filter offers Any or 1, 3, 5, 10 and 20 km. The first fix fits you and
+up to five nearby matching cafes; later fixes update distances after moving
+more than 50 m without moving the camera. Outside Jeju, distances are still
+shown but the radius filter is disabled and the map is not recentered.
+
+Coordinates stay in memory in this tab: the app never saves them in browser
+storage, includes them in an export or the URL, logs them, or sends them in
+requests. Only the mode and selected radius are saved. The existing map
+provider still receives ordinary tile requests for the displayed map area.
+Turning the mode off clears the watch and in-memory location, removes the
+pin/distance column, and resets distance sorting to cafe name.
+
+There is no location prompt on load. A remembered mode only auto-starts if the
+Permissions API already reports access granted; otherwise another click is
+needed. Watching pauses while the page is hidden and resumes when visible.
+Reset keeps the saved radius, like the rating filter; Clear filters sets the
+radius back to Any. Geolocation requires HTTPS or localhost, not a plain-HTTP
+LAN address. Browsers without Geolocation hide the control.
+
+For deterministic local tests, open `/?near=33.4996,126.5312` and click Around
+me. `?near=denied` and `?near=unavailable` simulate failures. These overrides
+use only the synthetic value you explicitly put in the URL and never call
+Geolocation; the app never writes real coordinates into the URL. Reload with
+a different synthetic point to test another location.
 
 If storage is blocked or a write fails, the app keeps working in memory and
 shows a dismissible notice. Corrupt saved data is copied unchanged to a
@@ -246,6 +275,7 @@ docs/
 ├── i18n.js         # English UI strings (en)
 ├── index.html      # Page markup and third-party scripts
 ├── user-prefs.js   # Browser-only personal settings, validation and merge helpers
+├── geo.js          # Pure distance, Jeju bounds and synthetic-location helpers
 ├── prefs-notice.css # Non-blocking storage notices using light/dark design tokens
 ├── style.css       # Design tokens and responsive styling
 └── vendor/sql.js/  # Pinned sql.js runtime and license

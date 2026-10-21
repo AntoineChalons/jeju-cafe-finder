@@ -74,6 +74,7 @@ test("type filters narrow scope independently of region and combine with other f
 
 test("all filter labels use literal config text, never translation dictionaries", () => {
   const labels = {
+    state: { userLocation: null },
     message() { throw new Error("Filter labels must not call the translator"); },
     CRITERIA: [{ key: "outdoor", displayedText: "Outdoor seating" }],
   };

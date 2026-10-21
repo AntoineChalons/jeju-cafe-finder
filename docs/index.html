@@ -16,11 +16,11 @@
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
-<script src="vendor/sql.js/sql-wasm.js?v=20261021-tags"></script>
+<script src="vendor/sql.js/sql-wasm.js?v=20261021-around-me"></script>
 
-<link rel="stylesheet" href="style.css?v=20261021-tags" />
-<link rel="stylesheet" href="map-type-bar.css?v=20261021-tags" />
-<link rel="stylesheet" href="prefs-notice.css?v=20261021-tags" />
+<link rel="stylesheet" href="style.css?v=20261021-around-me" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261021-around-me" />
+<link rel="stylesheet" href="prefs-notice.css?v=20261021-around-me" />
 </head>
 <body>
 
@@ -70,6 +70,13 @@
         <label class="checkbox-item rating-include"><input type="checkbox" id="includeUnrated" checked disabled><span data-i18n="rating.includeUnrated">Include unrated places</span></label>
       </section>
 
+      <section class="filter-group" aria-labelledby="distanceHeading">
+        <h2 class="filter-title" id="distanceHeading" data-i18n="aroundMe.radius">Distance</h2>
+        <div class="radio-row distance-filter" id="distanceFilterList" role="radiogroup" aria-labelledby="distanceHeading" aria-describedby="distanceHint"></div>
+        <p class="filter-hint" id="distanceHint" data-i18n="aroundMe.needsLocation">Turn on "Around me" to filter by distance.</p>
+        <p class="filter-hint" data-i18n="aroundMe.privacy">Your location stays on this device.</p>
+      </section>
+
       <section class="filter-group" id="tagFilterGroup" aria-labelledby="tagFilterHeading" hidden>
         <h2 class="filter-title" id="tagFilterHeading" data-i18n="tags.filter">My tags</h2>
         <div id="tagFilterList" class="tag-filter-list"></div>
@@ -116,6 +123,7 @@
           <button type="button" class="link-btn" id="mapEmptyReset" data-i18n="filters.clear">Clear filters</button>
         </div>
       </div>
+      <p id="aroundMeStatus" class="around-me-status" role="status" aria-live="polite" aria-atomic="true"></p>
     </section>
 
     <section class="panel table-panel" aria-labelledby="tableHeading">
@@ -164,12 +172,13 @@
 </dialog>
 
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261021-tags"></script>
-<script src="data-config.js?v=20261021-tags"></script>
-<script src="filters-config.js?v=20261021-tags"></script>
-<script src="map-pins.js?v=20261021-tags"></script>
-<script src="db-loader.js?v=20261021-tags"></script>
-<script src="user-prefs.js?v=20261021-tags"></script>
-<script src="bootstrap.js?v=20261021-tags"></script>
+<script src="i18n.js?v=20261021-around-me"></script>
+<script src="data-config.js?v=20261021-around-me"></script>
+<script src="filters-config.js?v=20261021-around-me"></script>
+<script src="map-pins.js?v=20261021-around-me"></script>
+<script src="db-loader.js?v=20261021-around-me"></script>
+<script src="user-prefs.js?v=20261021-around-me"></script>
+<script src="geo.js?v=20261021-around-me"></script>
+<script src="bootstrap.js?v=20261021-around-me"></script>
 </body>
 </html>

@@ -4,6 +4,10 @@
 var REGIONS = ["North", "East", "South", "West"];
 var KINDS = ["cafe", "roastery", "bakery", "pub"];
 
+// Same box as tools/validate.py in jeju-cafe-data.
+var JEJU_BOUNDS = { south: 33.0, north: 34.0, west: 126.0, east: 127.0 };
+var AROUND_ME_RADII_KM = [1, 3, 5, 10, 20];
+
 // Monday-first, matching the `day` values in the database.
 var DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
