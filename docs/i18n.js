@@ -60,6 +60,20 @@ var APP_TRANSLATIONS = {
       needsLocation: 'Turn on "Around me" to filter by distance.',
       privacy: "Your location stays on this device.",
     },
+    tags: {
+      title: "Your tags", add: "Add tag", placeholder: "Add a tag…",
+      remove: "Remove tag {tag}", filter: "My tags", manage: "Tags",
+      tooLong: "Tags can be up to 30 characters.", tooMany: "A cafe can have up to 20 tags.",
+      required: "Enter a tag.", rename: "Rename", delete: "Delete",
+      renameLabel: "Rename tag {tag}", confirmDelete: "Remove “{tag}” from {count} cafes?",
+      count: "{count} cafes", more: "+{count}", empty: "No tags yet.",
+      immediate: "Tag changes are saved immediately, independently of the filter settings above.",
+      renamed: "Tag renamed.", deleted: "Tag removed.",
+      suggested: {
+        visited: "Visited", "want-to-go": "Want to go", favourite: "Favourite",
+        "great-coffee": "Great coffee", "great-vibe": "Great vibe", quiet: "Quiet",
+      },
+    },
     theme: { toLight: "Switch to light mode", toDark: "Switch to dark mode" },
     filters: {
       kind: "Type", kindGroup: "Venue type", mustHave: "Must have", reset: "Reset",
@@ -127,6 +141,7 @@ var APP_TRANSLATIONS = {
       cafe: "Cafe", area: "Area", size: "Size", price: "Price", today: "Today", match: "Match",
       myRating: "My rating",
       distance: "Distance",
+      myTags: "My tags",
       unknown: "—",
     },
     contact: {

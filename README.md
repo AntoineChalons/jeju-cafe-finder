@@ -70,9 +70,10 @@ the displayed stars but keeps a timestamped null entry (a tombstone) for cross-t
 merging. Ratings for IDs absent from the published data stay stored but never
 appear in the UI; published cafe IDs must not be renamed.
 
-`window.UserPrefs` also provides storage for tags. Their feature controls and
-JSON export/import arrive in follow-up personalization issues. Export is not
-available in this release.
+Visitors can add suggested/custom tags in popups, filter by tags with AND,
+sort by tag count, and rename/delete tags across cafes in Personalize. Tags
+are limited to 30 characters and 20 per cafe and stay in browser storage.
+JSON export/import arrives in a follow-up issue; export is not yet available.
 
 ### Around me
 

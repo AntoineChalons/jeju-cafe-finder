@@ -77,6 +77,11 @@
         <p class="filter-hint" data-i18n="aroundMe.privacy">Your location stays on this device.</p>
       </section>
 
+      <section class="filter-group" id="tagFilterGroup" aria-labelledby="tagFilterHeading" hidden>
+        <h2 class="filter-title" id="tagFilterHeading" data-i18n="tags.filter">My tags</h2>
+        <div id="tagFilterList" class="tag-filter-list"></div>
+      </section>
+
       <section class="filter-group results-summary" id="resultsSummary" data-testid="text-results-summary" aria-live="polite"></section>
     </div>
 
@@ -147,9 +152,18 @@
     <h2 id="personalizeTitle" data-i18n="personalize.title">Personalize</h2>
     <p id="personalizeDescription" data-i18n="personalize.description">Choose which filters to show, their order, and which start switched on. Changes stay in this browser.</p>
   </div>
+  <div class="personalize-body">
   <h3 id="personalizeFiltersHeading" class="personalize-section-title" data-i18n="personalize.filters">Filters</h3>
   <ol id="personalizeList" class="personalize-list" aria-labelledby="personalizeFiltersHeading"></ol>
   <p id="personalizeStatus" class="sr-only" role="status"></p>
+  <section class="personalize-tags" aria-labelledby="personalizeTagsHeading">
+    <h3 id="personalizeTagsHeading" class="personalize-section-title" data-i18n="tags.manage">Tags</h3>
+    <p class="tag-management-hint" data-i18n="tags.immediate">Tag changes are saved immediately, independently of the filter settings above.</p>
+    <div id="personalizeTags"></div>
+    <p id="personalizeTagError" class="tag-error" role="alert"></p>
+    <p id="personalizeTagStatus" class="sr-only" role="status"></p>
+  </section>
+  </div>
   <div class="personalize-footer">
     <button type="button" class="link-btn" id="personalizeRestore" data-i18n="personalize.restore">Restore defaults</button>
     <button type="button" class="personalize-button" id="personalizeCancel" data-i18n="personalize.cancel">Cancel</button>

@@ -8,8 +8,8 @@
   var APP_NAME = "jeju-cafe-finder";
   var SCHEMA_VERSION = 1;
   var SAVE_DELAY_MS = 250;
-  var MAX_TAG_LENGTH = 40;
-  var MAX_TAGS_PER_CAFE = 30;
+  var MAX_TAG_LENGTH = typeof TAG_MAX_LENGTH === "number" ? TAG_MAX_LENGTH : 30;
+  var MAX_TAGS_PER_CAFE = typeof TAG_MAX_PER_CAFE === "number" ? TAG_MAX_PER_CAFE : 20;
   var MAX_RADIUS_KM = 100;
   var ID_PATTERN = /^[a-z][a-z0-9-]*$/;
   var NAME_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
@@ -62,8 +62,7 @@
   }
 
   function cleanText(text) {
-    return String(text).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()
-      .slice(0, MAX_TAG_LENGTH).trim();
+    return String(text).normalize("NFC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
   }
 
   // Returns the stored form of a tag, or null when nothing is left after cleaning.
@@ -71,14 +70,14 @@
   function normalizeTag(text, suggestedLabels) {
     if (typeof text !== "string") return null;
     var clean = cleanText(text);
-    if (!clean) return null;
+    if (!clean || Array.from(clean).length > MAX_TAG_LENGTH) return null;
     if (isObject(suggestedLabels)) {
-      var lower = clean.toLowerCase();
+      var lower = clean.toLocaleLowerCase();
       var keys = Object.keys(suggestedLabels);
       for (var i = 0; i < keys.length; i += 1) {
         var label = suggestedLabels[keys[i]];
-        if (keys[i].toLowerCase() === lower ||
-            (typeof label === "string" && label.toLowerCase() === lower)) {
+        if (keys[i].toLocaleLowerCase() === lower ||
+            (typeof label === "string" && label.toLocaleLowerCase() === lower)) {
           return keys[i];
         }
       }
@@ -92,7 +91,7 @@
     tags.forEach(function (tag) {
       var normalized = normalizeTag(tag, suggestedLabels);
       if (normalized === null) return;
-      var folded = normalized.toLowerCase();
+      var folded = normalized.toLocaleLowerCase();
       if (seen[folded] || out.length >= MAX_TAGS_PER_CAFE) return;
       seen[folded] = true;
       out.push(normalized);
@@ -487,6 +486,16 @@
       return false;
     }
     var next = normalizeTagList(tags, suggestedLabels);
+    // Setters reject invalid input rather than silently truncating the visitor's edit.
+    if (tags.some(function (tag) {
+      return typeof tag !== "string" || Array.from(cleanText(tag)).length > MAX_TAG_LENGTH;
+    })) return false;
+    var unique = Object.create(null);
+    tags.forEach(function (tag) {
+      var normalized = normalizeTag(tag, suggestedLabels);
+      if (normalized !== null) unique[normalized.toLocaleLowerCase()] = true;
+    });
+    if (Object.keys(unique).length > MAX_TAGS_PER_CAFE) return false;
     var current = doc.tags[id] ? doc.tags[id].tags : [];
     if (JSON.stringify(current) === JSON.stringify(next)) return true;
     var stamp = nowFn();
@@ -501,7 +510,7 @@
     var tags = ensureDoc().tags;
     Object.keys(tags).forEach(function (id) {
       tags[id].tags.forEach(function (tag) {
-        var folded = tag.toLowerCase();
+        var folded = tag.toLocaleLowerCase();
         if (!counts[folded]) {
           counts[folded] = { tag: tag, count: 0 };
           order.push(folded);
@@ -510,8 +519,49 @@
       });
     });
     return order.map(function (folded) { return counts[folded]; }).sort(function (a, b) {
-      return b.count - a.count || (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0);
+      return b.count - a.count || a.tag.toLocaleLowerCase().localeCompare(b.tag.toLocaleLowerCase());
     });
+  }
+
+  function renameTag(from, to, suggestedLabels) {
+    var old = normalizeTag(from, suggestedLabels);
+    var next = normalizeTag(to, suggestedLabels);
+    if (old === null || next === null) return false;
+    var tags = ensureDoc().tags;
+    var stamp = nowFn();
+    var changed = false;
+    Object.keys(tags).forEach(function (id) {
+      var current = tags[id].tags;
+      if (!current.some(function (tag) {
+        return tag.toLocaleLowerCase() === old.toLocaleLowerCase();
+      })) return;
+      var renamed = normalizeTagList(current.map(function (tag) {
+        return tag.toLocaleLowerCase() === old.toLocaleLowerCase() ? next : tag;
+      }), suggestedLabels);
+      if (JSON.stringify(current) === JSON.stringify(renamed)) return;
+      tags[id] = { tags: renamed, updatedAt: stamp };
+      changed = true;
+    });
+    if (changed) commit(stamp);
+    return true;
+  }
+
+  function deleteTag(tag) {
+    var clean = normalizeTag(tag);
+    if (clean === null) return false;
+    var tags = ensureDoc().tags;
+    var stamp = nowFn();
+    var changed = false;
+    Object.keys(tags).forEach(function (id) {
+      var kept = tags[id].tags.filter(function (value) {
+        return value.toLocaleLowerCase() !== clean.toLocaleLowerCase();
+      });
+      if (kept.length === tags[id].tags.length) return;
+      tags[id] = { tags: kept, updatedAt: stamp };
+      changed = true;
+    });
+    if (changed) commit(stamp);
+    return true;
   }
 
   // Config has already been validated. Saved preferences are untrusted and
@@ -628,6 +678,8 @@
     getTags: getTags,
     setTags: setTags,
     allTags: allTags,
+    renameTag: renameTag,
+    deleteTag: deleteTag,
     getFilterPrefs: getFilterPrefs,
     applyFilterPrefs: applyFilterPrefs,
     setFilterPrefs: setFilterPrefs,
