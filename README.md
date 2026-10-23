@@ -12,6 +12,12 @@ Users can:
 
 - Filter by venue type: All, Cafes, Roasters, Bakers or Pub. Region labels
   remain available in the comparison table and map popups.
+- Find hybrid places under any of their types using the single-select Type
+  filter. Popup and comparison-table text pills list all kinds, primary first.
+  Pins still show only the primary kind. Type result sets can overlap; the
+  summary counts unique venues within the selected scope, not additive totals.
+  Older databases without `cafe_kinds` use `[kind]` automatically. This fallback
+  does not change strict display-config validation or browser preferences.
 - Choose visible criteria, their order and default selections through
   Personalize beside Reset. All filters listed in `filters-config.json` are
   available there, including those hidden by default.

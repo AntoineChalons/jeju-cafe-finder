@@ -44,6 +44,12 @@
     return message("kinds." + kind);
   }
 
+  function kindPillsHtml(cafe) {
+    return '<div class="kind-pills">' + (cafe.kinds || [cafe.kind]).map(function (kind) {
+      return '<span class="kind-pill">' + escapeHtml(kindLabel(kind)) + "</span>";
+    }).join("") + "</div>";
+  }
+
   function sizeLabel(size) {
     return size ? message("sizes." + size) : "";
   }
@@ -368,7 +374,7 @@
   }
 
   function matchesScope(cafe, ignoreRating) {
-    if (state.kind !== "All" && cafe.kind !== state.kind) return false;
+    if (state.kind !== "All" && (cafe.kinds || [cafe.kind]).indexOf(state.kind) === -1) return false;
     var sizes = selectedValues(state.sizes);
     if (sizes.length && sizes.indexOf(cafe.size) === -1) return false;
     var prices = selectedValues(state.prices);
@@ -1425,6 +1431,7 @@
       '<a class="popup-title" href="' + naver + '" target="_blank" rel="noopener">' +
       escapeHtml(display.name) + EXTERNAL_SVG + "</a>" +
       '<div class="popup-kr">' + (secondaryName(cafe) ? escapeHtml(secondaryName(cafe)) + " · " : "") + escapeHtml(regionName(cafe.region)) + "</div>" +
+      kindPillsHtml(cafe) +
       (state.userLocation ? '<p class="popup-distance">' + escapeHtml(message("aroundMe.fromYou", {
         distance: CafeGeo.formatDistance(state.distances[cafe.id], "en"),
       })) + "</p>" : "") +
@@ -2010,7 +2017,7 @@
       var cells =
         '<td><div class="cell-name-wrap">' + showOnMapButton(cafe) +
           '<div class="cell-name"><a href="' + safeUrl(cafe.naverUrl) + '" target="_blank" rel="noopener" data-testid="link-cafe-' + escapeHtml(cafe.id) + '">' +
-          escapeHtml(display.name) + EXTERNAL_SVG + "</a>" + (secondaryName(cafe) ? "<small>" + escapeHtml(secondaryName(cafe)) + "</small>" : "") + "</div></div></td>" +
+          escapeHtml(display.name) + EXTERNAL_SVG + "</a>" + (secondaryName(cafe) ? "<small>" + escapeHtml(secondaryName(cafe)) + "</small>" : "") + kindPillsHtml(cafe) + "</div></div></td>" +
         '<td><span class="region-pill region-' + cafe.region + '">' + escapeHtml(regionLabel(cafe.region)) + "</span></td>" +
         "<td>" + (cafe.size ? escapeHtml(sizeLabel(cafe.size)) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +
         '<td class="cell-price">' + (cafe.price ? priceSymbol(cafe.price) : '<span class="cell-unknown">' + message("table.unknown") + "</span>") + "</td>" +

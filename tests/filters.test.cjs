@@ -102,6 +102,44 @@ test("all filter labels use literal config text, never translation dictionaries"
   assert.doesNotMatch(app, /message\("criteria(?:Short)?\./);
 });
 
+test("single-select Type matches primary and extra kinds, and All includes hybrids", () => {
+  const scope = {
+    CRITERIA: [{ key: "outdoor" }], SIZES: sandbox.SIZES, PRICES: sandbox.PRICES,
+    window: {}, hasCriterion: (entry, key) => entry[key] === true,
+  };
+  vm.createContext(scope);
+  vm.runInContext(app.slice(app.indexOf("  var state ="), app.indexOf("  var kindListEl")), scope);
+  const hybrid = { kind: "cafe", kinds: ["cafe", "roastery"], size: "medium", price: 2, outdoor: true };
+  for (const [kind, expected] of [["cafe", true], ["roastery", true], ["bakery", false], ["pub", false], ["All", true]]) {
+    scope.state.kind = kind;
+    assert.equal(scope.matchesFilters(hybrid), expected);
+  }
+  scope.state.kind = "roastery";
+  assert.equal(scope.matchesScope({ ...hybrid, kinds: ["cafe"] }), false);
+  scope.state.criteria.outdoor = true;
+  assert.equal(scope.matchesFilters({ ...hybrid, outdoor: false }), false);
+  scope.state.sizes.tiny = true;
+  assert.equal(scope.matchesFilters(hybrid), false);
+});
+
+test("popup and comparison table use escaped primary-first text pills", () => {
+  const scope = {};
+  vm.createContext(scope);
+  vm.runInContext(app.slice(app.indexOf("  function kindPillsHtml("), app.indexOf("  function sizeLabel(")) +
+    app.slice(app.indexOf("  function escapeHtml("), app.indexOf("  function safeUrl(")), scope);
+  scope.kindLabel = (kind) => ({ cafe: "Cafes", roastery: "Roasters", bakery: "Bakers" })[kind] || kind;
+  const html = scope.kindPillsHtml({ kind: "cafe", kinds: ["cafe", "roastery", "bakery"] });
+  assert.equal(html, '<div class="kind-pills"><span class="kind-pill">Cafes</span>' +
+    '<span class="kind-pill">Roasters</span><span class="kind-pill">Bakers</span></div>');
+  assert.match(scope.kindPillsHtml({ kind: "<script>" }), /&lt;script&gt;/);
+  for (const [start, end] of [
+    ["  function buildPopupHtml(", "  function tagLabel("],
+    ["  function renderTable(", "   * Recommendation engine"],
+  ]) {
+    assert.ok(app.slice(app.indexOf(start), app.indexOf(end)).includes("kindPillsHtml(cafe)"));
+  }
+});
+
 test("filter markup opts out of automatic translation and escapes literal text", () => {
   const labels = {};
   vm.createContext(labels);

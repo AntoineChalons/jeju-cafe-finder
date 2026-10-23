@@ -60,6 +60,7 @@
       name: row.name,
       nameKr: row.name_kr,
       kind: row.kind,
+      kinds: [row.kind],
       region: row.region,
       lat: row.lat,
       lng: row.lng,
@@ -126,6 +127,17 @@
       cafes.forEach(function (cafe) {
         byId[cafe.id] = cafe;
       });
+
+      // Old databases have only cafes.kind. Do not hide malformed-table errors:
+      // absence alone is the supported compatibility fallback.
+      if (rows(database, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'cafe_kinds'").length) {
+        rows(database, "SELECT cafe_id, kind, is_primary FROM cafe_kinds ORDER BY is_primary DESC, rowid")
+          .forEach(function (row) {
+            var cafe = byId[row.cafe_id];
+            if (!cafe || cafe.kinds.indexOf(row.kind) !== -1) return;
+            cafe.kinds.push(row.kind);
+          });
+      }
 
       rows(database, "SELECT cafe_id, day, open, close FROM cafe_hours ORDER BY cafe_id, day, open")
         .forEach(function (row) {

@@ -137,11 +137,14 @@ test("legend precedes map and shares the marker symbol factory and English type 
   assert.ok(html.indexOf('id="mapLegend"') < html.indexOf('id="map"'));
   assert.match(app.slice(app.indexOf("  function renderMapLegend()"), app.indexOf("  function mapPinTitle")), /createMapPinSymbol\(kind\)/);
   assert.match(app.slice(app.indexOf("  function createMarkers()"), app.indexOf("  function updateMapMarkers")), /createMapPinSymbol\(cafe.kind\)/);
+  assert.match(app, /mapPinPopupOffset\(cafe.kind\)/);
+  assert.match(html, /class="map-legend-note" data-i18n="map.primaryType"/);
   assert.match(app, /renderMapLegend\(\);/);
   const translations = {};
   vm.createContext(translations);
   vm.runInContext(fs.readFileSync(path.join(docs, "i18n.js"), "utf8"), translations);
   assert.ok(translations.APP_TRANSLATIONS.en.map.legend);
+  assert.match(translations.APP_TRANSLATIONS.en.map.primaryType, /primary type.*Hybrid/);
   for (const kind of Object.keys(config)) {
     assert.ok(translations.APP_TRANSLATIONS.en.map.pinTypes[kind]);
   }

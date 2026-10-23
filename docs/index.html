@@ -16,11 +16,11 @@
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
-<script src="vendor/sql.js/sql-wasm.js?v=20261021-backup"></script>
+<script src="vendor/sql.js/sql-wasm.js?v=20261023-hybrid"></script>
 
-<link rel="stylesheet" href="style.css?v=20261021-backup" />
-<link rel="stylesheet" href="map-type-bar.css?v=20261021-backup" />
-<link rel="stylesheet" href="prefs-notice.css?v=20261021-backup" />
+<link rel="stylesheet" href="style.css?v=20261023-hybrid" />
+<link rel="stylesheet" href="map-type-bar.css?v=20261023-hybrid" />
+<link rel="stylesheet" href="prefs-notice.css?v=20261023-hybrid" />
 </head>
 <body>
 
@@ -114,6 +114,7 @@
         <h2 class="map-legend-title" id="mapLegendTitle" data-i18n="filters.kind">Type</h2>
         <div class="radio-row" id="kindList" role="radiogroup" aria-label="Venue type" data-i18n-aria-label="filters.kindGroup"></div>
         <ul class="map-legend" id="mapLegend" data-testid="map-pin-legend" hidden></ul>
+        <p class="map-legend-note" data-i18n="map.primaryType">Pins show the primary type. Hybrid places match each of their types.</p>
       </div>
       <div class="map-wrap">
         <div id="map" data-testid="map-cafes"></div>
@@ -210,13 +211,13 @@
 </dialog>
 
 <!-- Bump this shared revision when changing local assets or their DOM contract. -->
-<script src="i18n.js?v=20261021-backup"></script>
-<script src="data-config.js?v=20261021-backup"></script>
-<script src="filters-config.js?v=20261021-backup"></script>
-<script src="map-pins.js?v=20261021-backup"></script>
-<script src="db-loader.js?v=20261021-backup"></script>
-<script src="user-prefs.js?v=20261021-backup"></script>
-<script src="geo.js?v=20261021-backup"></script>
-<script src="bootstrap.js?v=20261021-backup"></script>
+<script src="i18n.js?v=20261023-hybrid"></script>
+<script src="data-config.js?v=20261023-hybrid"></script>
+<script src="filters-config.js?v=20261023-hybrid"></script>
+<script src="map-pins.js?v=20261023-hybrid"></script>
+<script src="db-loader.js?v=20261023-hybrid"></script>
+<script src="user-prefs.js?v=20261023-hybrid"></script>
+<script src="geo.js?v=20261023-hybrid"></script>
+<script src="bootstrap.js?v=20261023-hybrid"></script>
 </body>
 </html>

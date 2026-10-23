@@ -137,6 +137,7 @@ var APP_TRANSLATIONS = {
     map: {
       title: "Map",
       legend: "Map key",
+      primaryType: "Pins show the primary type. Hybrid places match each of their types.",
       pinTypes: { bakery: "Bakery", roastery: "Roastery", cafe: "Cafe", pub: "Pub" },
       empty: "No cafe matches every filter you've selected.",
       noData: "No cafes have been added yet.",

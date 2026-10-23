@@ -26,6 +26,7 @@ Runtime data flow: CSV -> validate -> SQLite -> public-data/cafes.db -> `docs/db
 - Drafts (`publish=false`) must never reach the public DB. The app also ignores rows with `publish = 0`.
 - Time logic always uses `Asia/Seoul`, never the device time zone. Hours are periods per weekday (`mon`..`sun`). A close earlier than the open means the cafe closes after midnight. `24:00` is a valid close. Overlapping periods are rejected. `?at=sat-23:30` freezes the clock for testing.
 - Classification is conservative: a boolean criterion is `1` only when confirmed.
+- Hybrid places: `cafe.kind` stays primary (pins and icons); `cafe.kinds` lists all kinds primary first, loaded from `cafe_kinds`. Only a missing table falls back to `[kind]`. The single-select Type filter matches any listed kind; popup/table show text pills. Type scopes overlap, so counts are not additive. Never infer kinds from `localRoast` or change cafe IDs/preferences.
 - Config-driven UI:
   - `docs/filters-config.json` holds filter labels and default visibility/order. `enabled` means visible by default, not globally available. Visitors can show, hide and reorder any listed filter through Personalize. Remove an entry to make it unavailable to everyone; never rename `name`. `displayedText` is intentionally not translated (`translate="no"`).
   - `docs/map-pins-config.json` holds pin colours and sizes. Keep all 4 keys (bakery, roastery, cafe, pub), `#RRGGBB` colours and integer pixel sizes.

@@ -211,6 +211,6 @@ test("sidebar counts and visibility follow stored tags; all asset revisions matc
   assert.ok(node("tagFilterList").innerHTML.includes("(2)"));
   const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
   const versions = [...html.matchAll(/\?v=([^"]+)/g)].map((match) => match[1]);
-  assert.deepEqual([...new Set(versions)], ["20261021-backup"]);
+  assert.deepEqual([...new Set(versions)], ["20261023-hybrid"]);
   assert.ok(html.includes('role="alert"'));
 });

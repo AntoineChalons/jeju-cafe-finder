@@ -364,8 +364,8 @@ test("distance column is conditional and all local revisions include geo.js", ()
   h.scope.state.userLocation = HERE;
   assert.equal(h.scope.tableColumns().some((column) => column.key === "distance"), true);
   const html = fs.readFileSync(path.join(docs, "index.html"), "utf8");
-  assert.match(html, /geo\.js\?v=20261021-backup/);
-  assert.deepEqual([...new Set([...html.matchAll(/\?v=([^"]+)/g)].map((match) => match[1]))], ["20261021-backup"]);
+  assert.match(html, /geo\.js\?v=20261023-hybrid/);
+  assert.deepEqual([...new Set([...html.matchAll(/\?v=([^"]+)/g)].map((match) => match[1]))], ["20261023-hybrid"]);
   assert.match(html, /id="aroundMeStatus"[^>]*role="status"/);
   const css = fs.readFileSync(path.join(docs, "style.css"), "utf8");
   assert.match(css, /prefers-reduced-motion: reduce/);
